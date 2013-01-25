@@ -163,14 +163,14 @@
 
 
     var Stage = Crono.extend({
-        flow: function () {
+        flow: function (reverse) {
             var now    = +new Date();
             var d      = now - this._prevTime;
             var children = this._children;
             var len    = children.length;
 
             while (len--) {
-                children[len].enterFrame();
+                children[len].enterFrame(reverse);
             }
 
             this._prevTime = now;
@@ -317,8 +317,8 @@
 
             this._keyframes = keyframes;
         },
-        enterFrame: function () {
-            var t     = this._frame++,
+        enterFrame: function (reverse) {
+            var t     = reverse ? this._frame-- : this._frame++,
                 el    = this.el,
                 props = this._keyframes.getFrameAt(t);
 
