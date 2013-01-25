@@ -226,63 +226,79 @@
         },
 
         /**
+         * @param {Crono} crono
+         */
+        setParent: function (crono) {
+            this._parent = crono;
+        },
+
+        /**
          * @param {number} pos
          */
         getFrameAt: function (pos) {
 
             var keyframes = this._getKeyframes(pos),
                 from  = keyframes.from,
-                to = keyframes.to;
+                to = keyframes.to,
+                ret = {},
+
+                fromProp,
+                toProp;
 
             if (!from) {
                 return;
             }
 
             if (!to) {
-                return getUnitTypeAll(from.properties);
+                ret = getUnitTypeAll(from.properties);
+            }
+            else {
+
+                fromProp = from.properties;
+                toProp   = to.properties;
+
+                var f = 0,
+                    b = 0,
+                    c = 0,
+                    d = to.frame - from.frame,
+                    easeFunc = easing[from.timingFunction || 'easeInOutCubic'],
+                    val = 0,
+                    unit = '';
+
+                if (!easeFunc) {
+                    throw new Error('Argument of timingFunction is not exist.');
+                }
+
+                var fromFrame = from.frame,
+                    flg = false;
+
+                for (var prop in fromProp) {
+                    flg = (fromProp[prop] && toProp[prop]);
+                    if (flg === 0 || flg) {
+                        b = fromProp[prop];
+                        f = toProp[prop];
+                        c = f - b;
+                        val = easeFunc(pos - fromFrame, b, c, d);
+                        ret[prop] = val;
+                    }
+                }
+
+                ret = getUnitTypeAll(ret);
             }
 
-            var fromProp  = from.properties,
-                toProp = to.properties;
-
-            var f = 0,
-                b = 0,
-                c = 0,
-                d = to.frame - from.frame,
-                easeFunc = easing[from.timingFunction || 'easeInOutCubic'],
-                val = 0,
-                unit = '',
-                ret = {};
-
-            if (!easeFunc) {
-                throw new Error('Argument of timingFunction is not exist.');
-            }
-
-            var fromFrame = from.frame,
-                flg = false;
-
-            for (var prop in fromProp) {
-                flg = (fromProp[prop] && toProp[prop]);
-                if (flg === 0 || flg) {
-                    b = fromProp[prop];
-                    f = toProp[prop];
-                    c = f - b;
-                    val = easeFunc(pos - fromFrame, b, c, d);
-                    ret[prop] = val;
+            if (from && from.frame === pos) {
+                if (from.onEnterFrame) {
+                    from.onEnterFrame.call(this._parent);
                 }
             }
 
-            ret = getUnitTypeAll(ret);
+            if (to && to.frame === pos) {
+                if (to.onEnterFrame) {
+                    to.onEnterFrame.call(this._parent);
+                }
+            }
 
             return ret;
-
-            //if (fromFrame === t && from.onEnterFrame) {
-            //    from.onEnterFrame.call(this);
-            //}
-
-            //if (to.frame === t && to.onEnterFrame) {
-            //    to.onEnterFrame.call(this);
-            //}
         }
     });
 
@@ -295,7 +311,11 @@
             this.el        = el;
             this._frame    = 0;
             this._index    = 0;
-            this._keyframes = keyframes instanceof Keyframes ? Keyframes : new Keyframes(keyframes);
+
+            keyframes = keyframes instanceof Keyframes ? Keyframes : new Keyframes(keyframes);
+            keyframes.setParent(this);
+
+            this._keyframes = keyframes;
         },
         enterFrame: function () {
             var t     = this._frame++,
