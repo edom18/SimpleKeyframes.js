@@ -104,7 +104,7 @@
 
         div.style[prop] = 0;
 
-        var unit = div.style[prop];
+        var unit = '' + div.style[prop];
         unit = unit.slice(1);
         unitTypes[prop] = unit;
 
