@@ -329,11 +329,18 @@
             this._keyframes = keyframes;
         },
         enterFrame: function (reverse) {
-            var t     = reverse ? this._frame-- : this._frame++,
-                el    = this.el,
+
+            if (this._stopped) {
+                return;
+            }
+
+            var t  = reverse ? this._frame-- : this._frame++,
+                el = this.el,
                 props;
 
-            (t < 0) && (this._frame = 0);
+            if (t < 0) {
+                this._frame = t = 0;
+            }
             props = this._keyframes.getFrameAt(t);
 
             for (var prop in props) {
