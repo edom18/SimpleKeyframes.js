@@ -105,7 +105,7 @@
         div.style[prop] = 0;
 
         var unit = div.style[prop];
-        unit = unit.slice(1, unit.length);
+        unit = unit.slice(1);
         unitTypes[prop] = unit;
 
         return unit;
@@ -163,22 +163,33 @@
 
 
     var Stage = Crono.extend({
-        flow: function (reverse) {
-            var now    = +new Date();
-            var d      = now - this._prevTime;
-            var children = this._children;
-            var len    = children.length;
+        init: function () {
+            this._super();
+            this._stopped = true;
+            this._reversing = false;
+        },
+        flow: function () {
+            var children  = this._children,
+                len       = children.length,
+                reversing = this._reversing;
 
-            while (len--) {
-                children[len].enterFrame(reverse);
+            if (this._stopped) {
+                return;
             }
 
-            this._prevTime = now;
+            while (len--) {
+                children[len].enterFrame(reversing);
+            }
+        },
+        timeForward: function () {
+            this._reversing = false;
+        },
+        timeBackward: function () {
+            this._reversing = true;
         },
         run: function () {
             var self = this;
 
-            this._prevTime = +new Date();
             this._stopped = false;
 
             (function loop() {
@@ -320,7 +331,10 @@
         enterFrame: function (reverse) {
             var t     = reverse ? this._frame-- : this._frame++,
                 el    = this.el,
-                props = this._keyframes.getFrameAt(t);
+                props;
+
+            (t < 0) && (this._frame = 0);
+            props = this._keyframes.getFrameAt(t);
 
             for (var prop in props) {
                 el.style[prop] = props[prop];
