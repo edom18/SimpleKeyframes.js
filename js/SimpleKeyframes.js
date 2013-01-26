@@ -1,3 +1,11 @@
+/**
+ * This script give simple keyframe system.
+ * @version 0.0.1
+ * @author Kazuya Hiruma
+ * @email edo.m18@gmail.com
+ * @blog http://css-eblog.com/
+ * @github https://github.com/edom18/SimpleKeyframes.js
+ */
 (function (win, doc, Class, exports, undefined) {
 
     'use strict';
