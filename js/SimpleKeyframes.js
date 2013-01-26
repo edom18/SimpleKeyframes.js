@@ -294,7 +294,7 @@
             this._children  = [];
             this._frame     = 0;
             this._lastFrame = 0;
-            this.start();
+            this.play();
         },
 
         /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -362,7 +362,7 @@
          * Switch stop flag to `false`
          * If this flag is false, enterFrame method will work.
          */
-        start: function () {
+        play: function () {
             this._stopped = false;
         },
 
@@ -387,9 +387,9 @@
         /**
          * @override
          */
-        getLastFrame: function () {
-        
-        },
+        //getLastFrame: function () {
+        //
+        //},
 
         /**
          * Every frame it will be called.
@@ -466,8 +466,17 @@
 
     var Keyframes = EvtEmit.extend({
         init: function (frames) {
+            var frameItem = null;
+
+            if (({}).toString.call(frames) !== '[object Array]') {
+                frames = [frames];
+            }
+
             this._frames = frames;
-            this._lastFrame = frames[frames.length - 1].frame;
+
+            if ((frameItem = frames[frames.length - 1])) {
+                this._lastFrame = frameItem.frame;
+            }
         },
 
         /**
@@ -559,14 +568,14 @@
             }
 
             if (from && from.frame === pos) {
-                if (from.onEnterFrame) {
-                    from.onEnterFrame.call(this._parent);
+                if (from.on) {
+                    from.on.call(this._parent);
                 }
             }
 
             if (to && to.frame === pos) {
-                if (to.onEnterFrame) {
-                    to.onEnterFrame.call(this._parent);
+                if (to.on) {
+                    to.on.call(this._parent);
                 }
             }
 
@@ -589,11 +598,7 @@
             this.el     = el;
             this._index = 0;
 
-            keyframes = keyframes instanceof Keyframes ? Keyframes : new Keyframes(keyframes);
-            keyframes.setParent(this);
-            keyframes.on('update', this._onUpdate, this);
-
-            this._keyframes = keyframes;
+            this.setKeyframes(keyframes);
         },
 
         /**
@@ -609,7 +614,7 @@
         enterFrame: function (reverse, isTerminal) {
 
             //TODO
-            //this._super(reverse);
+            this._super(reverse);
 
             if (this._stopped) {
                 return;
@@ -631,23 +636,61 @@
                 this._frame = t = 0;
             }
 
+            if (!el) {
+                return;
+            }
+
             props = keyframes.getFrameAt(t);
 
             for (var prop in props) {
                 el.style[prop] = props[prop];
             }
         },
+
+        /**
+         * Go frame to position and play.
+         * @param {number} pos
+         */
         gotoAndPlay: function (pos) {
             this.go(pos);
-            this.start();
+            this.play();
         },
+
+        /**
+         * Go frame to position and stop.
+         * @param {number} pos
+         */
         gotoAndStop: function (pos) {
             this.go(pos);
             this.stop();
         },
+
+        /**
+         * Go frame to position.
+         * @param {number} pos
+         */
         go: function (pos) {
             this._frame = +pos;
         },
+
+        /**
+         * Set keyframes.
+         * @param {Keyframes} keyframes
+         */
+        setKeyframes: function (keyframes) {
+            var _keyframes = null;
+
+            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes);
+            _keyframes.setParent(this);
+            _keyframes.on('update', this._onUpdate, this);
+
+            this._keyframes = _keyframes;
+        },
+        
+
+        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            PRIVATE METHODS.
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
         _onUpdate: function (data) {
             //this.stop();
             //this._frame = data.lastFrame;
