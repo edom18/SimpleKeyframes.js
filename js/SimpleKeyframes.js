@@ -89,6 +89,8 @@
         }
     };
 
+    function nopp (argument) { /* noop. */ }
+
     var unitTypes = {};
 
     function getUnitType (prop) {
@@ -289,9 +291,40 @@
 
     var Crono = Class.extend({
         init: function () {
-            this._children = [];
+            this._children  = [];
+            this._frame     = 0;
+            this._lastFrame = 0;
             this.start();
         },
+
+        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            PRIVATE METHODS.
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+        /**
+         * Return last frame number.
+         * @return {number}
+         */
+        _getLastFrame: function () {
+            var children = this._children,
+                len = children.length,
+                ret = 0,
+                max = Math.max;
+
+            while (len--) {
+                ret = max(ret, children[len].getLastFrame());
+            }
+
+            return ret;
+        },
+        
+
+        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            PUBLIC METHODS.
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+        /**
+         * Add child. This takes Crono class.
+         * @param {Crono} crono
+         */
         add: function (crono) {
             if (({}).toString.call(crono) !== '[object Array]') {
                 crono = [crono];
@@ -300,8 +333,18 @@
             for (var i = 0, l = crono.length; i < l; ++i) {
                 this._children.push(crono[i]);
             }
+
+            this._lastFrame = this._getLastFrame();
         },
 
+        /**
+         * noop
+         */
+        getLastFrame: nopp,
+
+        /**
+         * Every frame it is invoked.
+         */
         enterFrame: function () {
             var children = this._children;
             var len = children.length;
@@ -315,9 +358,18 @@
             }
         },
 
+        /**
+         * Switch stop flag to `false`
+         * If this flag is false, enterFrame method will work.
+         */
         start: function () {
             this._stopped = false;
         },
+
+        /**
+         * Switch stop flag to `true`
+         * If this flag is true, enterFrame method will skip progress.
+         */
         stop: function () {
             this._stopped = true;
         }
@@ -331,25 +383,62 @@
             this._stopped = true;
             this._reversing = false;
         },
+
+        /**
+         * @override
+         */
+        getLastFrame: function () {
+        
+        },
+
+        /**
+         * Every frame it will be called.
+         */
         flow: function () {
             var children  = this._children,
                 len       = children.length,
-                reversing = this._reversing;
+                reversing = this._reversing,
+                lastFrame = this._lastFrame,
+                endFlg    = false;
 
             if (this._stopped) {
                 return;
             }
 
+            var t = reversing ? --this._frame : ++this._frame;
+
+            if (t < 0) {
+                this._frame = t = 0;
+            }
+            else if (t > lastFrame) {
+                this._frame = t = lastFrame;
+                endFlg = true;
+            }
+
             while (len--) {
-                children[len].enterFrame(reversing);
+                children[len].enterFrame(reversing, endFlg);
             }
         },
+
+        /**
+         * Switch the time flow to forward.
+         * If _reversing is false, time to move forward.
+         */
         timeForward: function () {
             this._reversing = false;
         },
+
+        /**
+         * Switch the time flow to backward.
+         * If _reversing is true, time to move backward.
+         */
         timeBackward: function () {
             this._reversing = true;
         },
+
+        /**
+         * Start the time.
+         */
         run: function () {
             var self = this;
 
@@ -363,6 +452,10 @@
                 self.frameTimer = setTimeout(loop, 32);
             }());
         },
+
+        /**
+         * Stop the time.
+         */
         stop: function () {
             this._super();
             clearTimeout(this.frameTimer);
@@ -493,35 +586,49 @@
         init: function (el, keyframes) {
             this._super();
 
-            this.el        = el;
-            this._frame    = 0;
-            this._index    = 0;
+            this.el     = el;
+            this._index = 0;
 
             keyframes = keyframes instanceof Keyframes ? Keyframes : new Keyframes(keyframes);
             keyframes.setParent(this);
             keyframes.on('update', this._onUpdate, this);
 
             this._keyframes = keyframes;
-            this._lastFrame = keyframes.getLastFrame();
         },
-        enterFrame: function (reverse) {
+
+        /**
+         * @return {number}
+         */
+        getLastFrame: function () {
+            return this._keyframes.getLastFrame();
+        },
+
+        /**
+         * @param {boolean} reverse
+         */
+        enterFrame: function (reverse, isTerminal) {
+
+            //TODO
+            //this._super(reverse);
 
             if (this._stopped) {
                 return;
             }
 
-            var t  = reverse ? this._frame-- : this._frame++,
+            var t  = 0,
                 el = this.el,
                 keyframes = this._keyframes,
                 lastFrame = this._lastFrame,
                 props;
 
+            if (isTerminal) {
+                return;
+            }
+
+            t  = reverse ? --this._frame : ++this._frame;
+
             if (t < 0) {
                 this._frame = t = 0;
-            }
-            else if (t > lastFrame) {
-                this._frame = t = lastFrame;
-                return;
             }
 
             props = keyframes.getFrameAt(t);
