@@ -19,7 +19,7 @@ module.exports = function(grunt) {
     // lint javascript file
     lint: {
       files: [
-        'js/main.js'
+        'js/SimpleKeyframes.js'
       ]
     },
     jshint: {
