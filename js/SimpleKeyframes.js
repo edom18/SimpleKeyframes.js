@@ -131,6 +131,20 @@
         return ret;
     }
 
+    function each (arr, func, context) {
+        if (Array.prototype.forEach) {
+            arr.forEach(func, context);
+        }
+        else {
+            for (var i = 0, l = arr.length; i < l; ++i) {
+                func.call(context || arr, arr[i]);
+            }
+        }
+    }
+
+    function isFunction (arg) {
+        return ({}).toString.call(arg) === '[object Function]';
+    }
 
     /**
      * EvtEmit class.
@@ -297,11 +311,12 @@
 
     ////////////////////////////////////////////////////////
 
-    var Crono = Class.extend({
+    var Crono = EvtEmit.extend({
         init: function () {
             this._children  = [];
             this._frame     = 0;
             this._lastFrame = 0;
+            this._reversing = false;
             this.play();
         },
 
@@ -329,6 +344,9 @@
         /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             PUBLIC METHODS.
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+        each: function (func, context) {
+            each(this._children, func, context || this);
+        },
         /**
          * Add child. This takes Crono class.
          * @param {Crono} crono
@@ -346,6 +364,28 @@
         },
 
         /**
+         * Switch the time flow to forward.
+         * If _reversing is false, time to move forward.
+         */
+        timeForward: function () {
+            this._reversing = false;
+            this.each(function (child) {
+                child.timeForward();
+            });
+        },
+
+        /**
+         * Switch the time flow to backward.
+         * If _reversing is true, time to move backward.
+         */
+        timeBackward: function () {
+            this._reversing = true;
+            this.each(function (child) {
+                child.timeBackward();
+            });
+        },
+
+        /**
          * noop
          */
         getLastFrame: nopp,
@@ -353,7 +393,7 @@
         /**
          * Every frame it is invoked.
          */
-        enterFrame: function () {
+        enterFrame: function (reverse, isTerminal) {
             var children = this._children;
             var len = children.length;
 
@@ -362,7 +402,7 @@
             }
 
             while (len--) {
-                children[len].enterFrame();
+                children[len].enterFrame(reverse, isTerminal);
             }
         },
 
@@ -372,6 +412,15 @@
          */
         play: function () {
             this._stopped = false;
+        },
+
+        playFor: function () {
+            this.timeForward();
+            this.play();
+        },
+        playBack: function () {
+            this.timeBackward();
+            this.play();
         },
 
         /**
@@ -389,15 +438,7 @@
         init: function () {
             this._super();
             this._stopped = true;
-            this._reversing = false;
         },
-
-        /**
-         * @override
-         */
-        //getLastFrame: function () {
-        //
-        //},
 
         /**
          * Every frame it will be called.
@@ -407,16 +448,20 @@
                 len       = children.length,
                 reversing = this._reversing,
                 lastFrame = this._lastFrame,
-                endFlg    = false;
+                endFlg    = false,
+                t;
 
             if (this._stopped) {
                 return;
             }
 
-            var t = reversing ? --this._frame : ++this._frame;
+            t = reversing ? --this._frame : ++this._frame;
 
             if (t < 0) {
                 this._frame = t = 0;
+            }
+            else if (t === lastFrame) {
+                this.trigger('animationend');
             }
             else if (t > lastFrame) {
                 this._frame = t = lastFrame;
@@ -424,24 +469,8 @@
             }
 
             while (len--) {
-                children[len].enterFrame(reversing, endFlg);
+                children[len].enterFrame(endFlg);
             }
-        },
-
-        /**
-         * Switch the time flow to forward.
-         * If _reversing is false, time to move forward.
-         */
-        timeForward: function () {
-            this._reversing = false;
-        },
-
-        /**
-         * Switch the time flow to backward.
-         * If _reversing is true, time to move backward.
-         */
-        timeBackward: function () {
-            this._reversing = true;
         },
 
         /**
@@ -474,19 +503,18 @@
 
     var Keyframes = EvtEmit.extend({
         init: function (frames) {
-            var frameItem = null;
 
             if (({}).toString.call(frames) !== '[object Array]') {
                 frames = [frames];
             }
 
             this._frames = frames;
-
-            if ((frameItem = frames[frames.length - 1])) {
-                this._lastFrame = frameItem.frame;
-            }
+            this._optimize();
         },
 
+        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            PRIVATE METHODS.
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
         /**
          * @param {number} pos
          */
@@ -509,7 +537,35 @@
                 to: to
             };
         },
+        
+        /**
+         * Optimize data.
+         */
+        _optimize: function () {
 
+            var frameItem = null,
+                frames = this._frames,
+                keyframeActions = {};
+
+            this.each(function (frame) {
+                if (frame && isFunction(frame.on)) {
+                    keyframeActions[frame.frame] = frame.on;
+                }
+            }, this);
+
+            this._keyframeActions = keyframeActions;
+
+            if ((frameItem = frames[frames.length - 1])) {
+                this._lastFrame = frameItem.frame;
+            }
+        },
+
+        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+            PUBLIC METHODS.
+        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+        each: function (func) {
+            each(this._frames, func, this);
+        },
         /**
          * @param {Crono} crono
          */
@@ -518,7 +574,7 @@
         },
 
         getLastFrame: function () {
-            return this._lastFrame;
+            return this._lastFrame || 0;
         },
 
         /**
@@ -526,10 +582,12 @@
          */
         getFrameAt: function (pos) {
 
-            var keyframes = this._getKeyframes(pos),
-                from  = keyframes.from,
-                to = keyframes.to,
-                ret = {},
+            var keyframeActions = this._keyframeActions,
+                keyframes = this._getKeyframes(pos),
+                lastFrame = this._lastFrame,
+                from = keyframes.from,
+                to   = keyframes.to,
+                ret  = {},
 
                 fromProp,
                 toProp;
@@ -575,21 +633,13 @@
                 ret = getUnitTypeAll(ret);
             }
 
-            if (from && from.frame === pos) {
-                if (from.on) {
-                    from.on.call(this._parent);
-                }
+            if (keyframeActions[pos]) {
+                keyframeActions[pos].call(this._parent);
             }
 
-            if (to && to.frame === pos) {
-                if (to.on) {
-                    to.on.call(this._parent);
-                }
-            }
-
-            if (!to && from && from.frame <= pos) {
+            if (lastFrame <= pos) {
                 this.trigger('frameend', {
-                    lastFrame: from.frame
+                    lastFrame: lastFrame
                 });
             }
 
@@ -619,30 +669,33 @@
         /**
          * @param {boolean} reverse
          */
-        enterFrame: function (reverse, isTerminal) {
+        enterFrame: function (isTerminal) {
 
-            //TODO
-            this._super(reverse);
+            this._super(isTerminal);
 
             if (this._stopped) {
                 return;
             }
 
-            var t  = 0,
+            var t  = this._frame,
                 el = this.el,
                 keyframes = this._keyframes,
-                lastFrame = this._lastFrame,
                 props;
 
-            if (isTerminal) {
-                return;
+            if (this._reversing) {
+                --t;
             }
-
-            t  = reverse ? --this._frame : ++this._frame;
+            else {
+                if (!isTerminal || this._lastFrame > t) {
+                    ++t;
+                }
+            }
 
             if (t < 0) {
                 this._frame = t = 0;
             }
+
+            this._frame = t;
 
             if (!el) {
                 return;
@@ -693,6 +746,7 @@
             _keyframes.on('update', this._onUpdate, this);
 
             this._keyframes = _keyframes;
+            this._lastFrame = this.getLastFrame();
         },
         
 
