@@ -502,13 +502,17 @@
     /////////////////////////////////////////////////////////////////
 
     var Keyframes = EvtEmit.extend({
-        init: function (frames) {
+        init: function (frames, config) {
+
+            config || (config = {});
+            config.defaults || (config.defaults = {});
 
             if (({}).toString.call(frames) !== '[object Array]') {
                 frames = [frames];
             }
 
             this._frames = frames;
+            this._config = config;
             this._optimize();
         },
 
@@ -545,9 +549,11 @@
 
             var frameItem = null,
                 frames = this._frames,
-                keyframeActions = {};
+                keyframeActions = {},
+                config = this._config;
 
             this.each(function (frame) {
+                frame && (frame.timingFunction = frame.timingFunction || config.defaults.timingFunction || null);
                 if (frame && isFunction(frame.on)) {
                     keyframeActions[frame.frame] = frame.on;
                 }
@@ -600,7 +606,6 @@
                 ret = getUnitTypeAll(from.properties);
             }
             else {
-
                 fromProp = from.properties;
                 toProp   = to.properties;
 
@@ -608,29 +613,30 @@
                     b = 0,
                     c = 0,
                     d = to.frame - from.frame,
-                    easeFunc = easing[from.timingFunction || 'easeInOutCubic'],
+                    easeFunc = easing[from.timingFunction || from.defaultFunction],
                     val = 0,
                     unit = '';
 
                 if (!easeFunc) {
-                    throw new Error('Argument of timingFunction is not exist.');
+                    ret = getUnitTypeAll(from.properties);
                 }
+                else {
+                    var fromFrame = from.frame,
+                        flg = false;
 
-                var fromFrame = from.frame,
-                    flg = false;
-
-                for (var prop in fromProp) {
-                    flg = (fromProp[prop] && toProp[prop]);
-                    if (flg === 0 || flg) {
-                        b = fromProp[prop];
-                        f = toProp[prop];
-                        c = f - b;
-                        val = easeFunc(pos - fromFrame, b, c, d);
-                        ret[prop] = val;
+                    for (var prop in fromProp) {
+                        flg = (fromProp[prop] && toProp[prop]);
+                        if (flg === 0 || flg) {
+                            b = fromProp[prop];
+                            f = toProp[prop];
+                            c = f - b;
+                            val = easeFunc(pos - fromFrame, b, c, d);
+                            ret[prop] = val;
+                        }
                     }
-                }
 
-                ret = getUnitTypeAll(ret);
+                    ret = getUnitTypeAll(ret);
+                }
             }
 
             if (keyframeActions[pos]) {
@@ -650,13 +656,13 @@
     /////////////////////////////////////////////////////////////////
     
     var Movie = Crono.extend({
-        init: function (el, keyframes) {
+        init: function (el, keyframes, config) {
             this._super();
 
             this.el     = el;
             this._index = 0;
 
-            this.setKeyframes(keyframes);
+            this.setKeyframes(keyframes, config);
         },
 
         /**
@@ -738,10 +744,10 @@
          * Set keyframes.
          * @param {Keyframes} keyframes
          */
-        setKeyframes: function (keyframes) {
+        setKeyframes: function (keyframes, config) {
             var _keyframes = null;
 
-            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes);
+            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes, config);
             _keyframes.setParent(this);
             _keyframes.on('update', this._onUpdate, this);
 
