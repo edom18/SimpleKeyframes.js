@@ -446,7 +446,6 @@
         flow: function () {
             var children  = this._children,
                 len       = children.length,
-                reversing = this._reversing,
                 lastFrame = this._lastFrame,
                 endFlg    = false,
                 t;
@@ -455,7 +454,7 @@
                 return;
             }
 
-            t = reversing ? --this._frame : ++this._frame;
+            t = this._reversing ? --this._frame : ++this._frame;
 
             if (t < 0) {
                 this._frame = t = 0;
@@ -553,9 +552,12 @@
                 config = this._config;
 
             this.each(function (frame) {
-                frame && (frame.timingFunction = frame.timingFunction || config.defaults.timingFunction || null);
-                if (frame && isFunction(frame.on)) {
-                    keyframeActions[frame.frame] = frame.on;
+                if (frame) {
+                    frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
+
+                    if (isFunction(frame.on)) {
+                        keyframeActions[frame.frame] = frame.on;
+                    }
                 }
             }, this);
 
@@ -572,6 +574,7 @@
         each: function (func) {
             each(this._frames, func, this);
         },
+
         /**
          * @param {Crono} crono
          */
@@ -595,52 +598,58 @@
                 to   = keyframes.to,
                 ret  = {},
 
+                easeFunc,
                 fromProp,
-                toProp;
+                toProp,
+                fromVal,
+                toVal;
 
             if (!from) {
                 return;
             }
 
+            easeFunc = from.easing;
+
             if (!to) {
+                ret = getUnitTypeAll(from.properties);
+            }
+            else if (!easeFunc) {
                 ret = getUnitTypeAll(from.properties);
             }
             else {
                 fromProp = from.properties;
                 toProp   = to.properties;
 
-                var f = 0,
+                var fromFrame = from.frame,
+                    f = 0,
                     b = 0,
                     c = 0,
-                    d = to.frame - from.frame,
-                    easeFunc = easing[from.timingFunction || from.defaultFunction],
+                    d = to.frame - fromFrame,
                     val = 0,
-                    unit = '';
+                    unit = '',
+                    action = null,
+                    flg = false;
 
-                if (!easeFunc) {
-                    ret = getUnitTypeAll(from.properties);
-                }
-                else {
-                    var fromFrame = from.frame,
-                        flg = false;
+                for (var prop in fromProp) {
+                    fromVal = fromProp[prop];
+                    toVal = toProp[prop]
 
-                    for (var prop in fromProp) {
-                        flg = (fromProp[prop] && toProp[prop]);
-                        if (flg === 0 || flg) {
-                            b = fromProp[prop];
-                            f = toProp[prop];
-                            c = f - b;
-                            val = easeFunc(pos - fromFrame, b, c, d);
-                            ret[prop] = val;
-                        }
+                    flg = (fromVal && toVal);
+
+                    if (flg === 0 || flg) {
+                        b = fromVal;
+                        f = toVal;
+                        c = f - b;
+                        val = easeFunc(pos - fromFrame, b, c, d);
+                        ret[prop] = val;
                     }
-
-                    ret = getUnitTypeAll(ret);
                 }
+
+                ret = getUnitTypeAll(ret);
             }
 
-            if (keyframeActions[pos]) {
-                keyframeActions[pos].call(this._parent);
+            if ((action = keyframeActions[pos])) {
+                action.call(this._parent);
             }
 
             if (lastFrame <= pos) {
@@ -691,10 +700,8 @@
             if (this._reversing) {
                 --t;
             }
-            else {
-                if (!isTerminal || this._lastFrame > t) {
-                    ++t;
-                }
+            else if (!isTerminal || this._lastFrame > t) {
+                ++t;
             }
 
             if (t < 0) {
