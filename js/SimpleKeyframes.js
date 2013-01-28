@@ -97,7 +97,7 @@
         }
     };
 
-    function nopp (argument) { /* noop. */ }
+    function noop (argument) { /* noop. */ }
 
     var unitTypes = {};
 
@@ -147,6 +147,25 @@
     }
 
     /**
+     * Dispose class
+     * @constructor
+     */
+    var Disposal = Class.extend({
+        disposeInternal: noop,
+        dispose: function (removeNode) {
+            var el = this.el;
+
+            if (removeNode && el) {
+                el.parentNode.removeChild(el);
+                this.el = null;
+            }
+
+            this.disposeInternal.apply(this, arguments);
+        }
+    });
+
+
+    /**
      * EvtEmit class.
      * @constructor
      * @example
@@ -159,7 +178,11 @@
      * //dispatch event
      * targetObj.trigger('update', data);
      */
-    var EvtEmit = Class.extend({
+    var EvtEmit = Disposal.extend({
+        dispose: function (removeNode) {
+            this._super(removeNode);
+            this.off();
+        },
         trigger: function  (type, optData) {
 
             var handlers,
@@ -211,6 +234,11 @@
                 handleArr,
                 i;
 
+            if (arguments.length === 0) {
+                this.clear();
+                return;
+            }
+
             if (!type) {
                 return false;
             }
@@ -226,6 +254,14 @@
                 while (i--) {
                     handleArr[i][0] === func && handleArr.splice(i, 1);
                 }
+            }
+        },
+
+        clear: function () {
+            var handlers  = this.handlers;
+
+            for (var type in handlers) {
+                handlers[type] = [];
             }
         }
     });
@@ -344,9 +380,41 @@
         /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
             PUBLIC METHODS.
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
+
+        /**
+         * Remove child as argument.
+         * @param {Crono} crono
+         */
+        remove: function (crono) {
+            var children = this._children,
+                len = children.length,
+                ret = null;
+
+            while (len--) {
+                if (children[len] === crono) {
+                    ret = children.splice(len, 1);
+                    break;
+                }
+            }
+
+            return ret;
+        },
+
+        /**
+         * function of arguments invoke to takes each child.
+         */
         each: function (func, context) {
             each(this._children, func, context || this);
         },
+
+        /**
+         * Set parent as this.
+         * @param {Crono} crono
+         */
+        setParent: function (crono) {
+            this._parent = crono;
+        },
+
         /**
          * Add child. This takes Crono class.
          * @param {Crono} crono
@@ -357,6 +425,7 @@
             }
 
             for (var i = 0, l = crono.length; i < l; ++i) {
+                crono[i].setParent(this);
                 this._children.push(crono[i]);
             }
 
@@ -388,7 +457,7 @@
         /**
          * noop
          */
-        getLastFrame: nopp,
+        getLastFrame: noop,
 
         /**
          * Every frame it is invoked.
@@ -500,6 +569,11 @@
 
     /////////////////////////////////////////////////////////////////
 
+    /**
+     * Keyframes class.
+     * @constructor
+     * Disposal <- EvtEmit
+     */
     var Keyframes = EvtEmit.extend({
         init: function (frames, config) {
 
@@ -513,6 +587,12 @@
             this._frames = frames;
             this._config = config;
             this._optimize();
+        },
+
+        dispose: function () {
+            this._super();
+            this._keyframeActions = null;
+            this._frames = null;
         },
 
         /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -672,6 +752,13 @@
             this._index = 0;
 
             this.setKeyframes(keyframes, config);
+        },
+
+        dispose: function (removeNode) {
+            this._super(removeNode);
+            this._parent.remove(this);
+            this._keyframes.dispose();
+            this._keyframes = null;
         },
 
         /**
