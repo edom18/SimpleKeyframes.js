@@ -1,0 +1,25 @@
+@import "compass/reset";
+@import "compass/css3";
+
+body {
+    background-color: #f3f3f3;
+}
+
+#container {
+    padding: 30px;
+}
+
+.movie {
+    position: absolute;
+    left: 20px;
+    top: 0;
+    width: 100px;
+    height: 100px;
+    background-color: #ccc;
+}
+
+@for $i from 1 through 10 {
+    .movie#{$i} {
+        top: #{$i * 110}px;
+    }
+}
