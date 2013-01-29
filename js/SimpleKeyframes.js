@@ -766,7 +766,9 @@
             this.each(function (frame) {
 
                 var properties,
-                    vp;
+                    unit = '',
+                    div  = null,
+                    vp   = null;
 
                 if (frame) {
                     frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
@@ -780,7 +782,8 @@
                         properties = frame.properties;
 
                         for (var prop in properties) {
-                            var div = doc.createElement('div');
+                            div  = doc.createElement('div');
+                            unit = '';
 
                             if (!prop in div.style) {
                                 delete properties[prop];
@@ -788,7 +791,7 @@
                             }
 
                             if (typeof properties[prop] === 'number') {
-                                var unit = getUnitType(prop);
+                                unit = getUnitType(prop);
                             }
 
                             div.style[prop] = properties[prop] + (unit || '');
