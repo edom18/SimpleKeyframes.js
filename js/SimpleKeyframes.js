@@ -99,6 +99,131 @@
 
     function noop (argument) { /* noop. */ }
 
+    function PropertyValue (val) {
+        this._value = val.value;
+        this._type  = val.type;
+    }
+    PropertyValue.prototype = {
+        toString: function () {
+            return this.stringify();
+        },
+        stringify: function (val) {
+
+            var values = this._value,
+                cnt    = 0,
+                type   = this._type,
+                ret    = type ? this._type + '(' : '';
+
+            for (var i = 0, l = values.length; i < l; i += 3) {
+                ret += val ? val[cnt++] : values[i + 0]; //as number
+                ret += values[i + 1] || ''; // as unit
+                ret += values[i + 2] || ''; // as separator
+            }
+            
+            ret += type ? ')' : '';
+
+            return ret;
+        },
+        getValues: function () {
+            return [].slice.call(this._value);
+        },
+        getType: function () {
+            return this._type;
+        },
+        constructor: PropertyValue
+    };
+
+    function ValueParser (prop, str) {
+        this._str = str;
+        this._prop = prop;
+        this._value = [];
+        this._type = '';
+    }
+
+    ValueParser.prototype = {
+        parse: function () {
+
+            var str = this._str,
+                reg = null,
+                m   = null;
+
+            if (typeof str === 'number') {
+                this._value.push(str);
+                this._value.push(getUnitType(this._prop));
+            }
+            else if (/^\d+$/.test(str)) {
+                this._value.push(+str);
+            }
+            //e.g. 5px | 5px 5px
+            else if (/\d/.test(str.charAt(0))) {
+                str = this._parse(str);
+            }
+
+            //e.g. rotate(90deg) | translate3d(1px, 2px, 3px)
+            else {
+                reg = /(\w+)\(/ig;
+                m = reg.exec(str);
+
+                if (m && m[1]) {
+                    this._type = m[1];
+                }
+
+                str = str.replace(reg, '');
+
+                if (!str) {
+                    throw new Error('Bad arguments');
+                }
+
+                str = this._parse(str);
+
+                reg = /\s*\)/i;
+                str = str.replace(reg, '');
+
+                if (str) {
+                    throw new Error('Bad arguments');
+                }
+            }
+
+            return new PropertyValue({
+                type : this._type,
+                value: this._value
+            });
+        },
+        _parse: function (str) {
+
+            var reg = null,
+                m   = null;
+
+            while (true) {
+                reg = /(\d+)(\.?\d+)*([a-z%]*)([\s,])?/i;
+                m = reg.exec(str);
+
+                if (!m || !m[0]) {
+                    break;
+                }
+
+                if (m[2]) {
+                    this._value.push(+(m[1] + m[2]));
+                }
+                else {
+                    this._value.push(+m[1]);
+                }
+
+                this._value.push(m[3] || '');
+
+                if (m[4]) {
+                    this._value.push(this._separate || m[4]);
+                    this._separate = this._separate || m[4];
+                }
+
+                str = str.replace(reg, '');
+            }
+
+            return str;
+        },
+        constructor: ValueParser
+    };
+
     var unitTypes = {};
 
     function getUnitType (prop) {
@@ -122,10 +247,17 @@
     }
 
     function getUnitTypeAll(props) {
-        var ret = {};
+        var ret = {},
+            tmp;
 
         for (var prop in props) {
-            ret[prop] = props[prop] + getUnitType(prop);
+            tmp = props[prop];
+            if (typeof tmp === 'number' || /^\d+(\.\d+)?$/.test(tmp)) {
+                ret[prop] = tmp + getUnitType(prop);
+            }
+            else {
+                ret[prop] = tmp;
+            }
         }
 
         return ret;
@@ -627,16 +759,50 @@
         _optimize: function () {
 
             var frameItem = null,
-                frames = this._frames,
                 keyframeActions = {},
+                frames = this._frames,
                 config = this._config;
 
             this.each(function (frame) {
+
+                var properties,
+                    vp;
+
                 if (frame) {
                     frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
 
                     if (isFunction(frame.on)) {
                         keyframeActions[frame.frame] = frame.on;
+                    }
+
+                    if (frame.properties) {
+                        frame.properties_ = {};
+                        properties = frame.properties;
+
+                        for (var prop in properties) {
+                            var div = doc.createElement('div');
+
+                            if (!prop in div.style) {
+                                delete properties[prop];
+                                continue;
+                            }
+
+                            if (typeof properties[prop] === 'number') {
+                                var unit = getUnitType(prop);
+                            }
+
+                            div.style[prop] = properties[prop] + (unit || '');
+
+                            if (!div.style[prop]) {
+                                delete properties[prop];
+                                continue;
+                            }
+
+                            vp = new ValueParser(prop, properties[prop]);
+                            var tmp = vp.parse();
+
+                            frame.properties_[prop] = tmp;
+                        }
                     }
                 }
             }, this);
@@ -646,6 +812,16 @@
             if ((frameItem = frames[frames.length - 1])) {
                 this._lastFrame = frameItem.frame;
             }
+        },
+
+        _makeProperties: function (properties) {
+            var ret = {};
+
+            for (var prop in properties) {
+                ret[prop] = properties[prop].toString();
+            }
+
+            return ret;
         },
 
         /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -691,14 +867,14 @@
             easeFunc = from.easing;
 
             if (!to) {
-                ret = getUnitTypeAll(from.properties);
+                ret = this._makeProperties(from.properties_);
             }
             else if (!easeFunc) {
-                ret = getUnitTypeAll(from.properties);
+                ret = this._makeProperties(from.properties_);
             }
             else {
-                fromProp = from.properties;
-                toProp   = to.properties;
+                fromProp = from.properties_;
+                toProp   = to.properties_;
 
                 var fromFrame = from.frame,
                     f = 0,
@@ -708,24 +884,30 @@
                     val = 0,
                     unit = '',
                     action = null,
-                    flg = false;
+                    flg = false,
+                    tmp = [];
 
                 for (var prop in fromProp) {
-                    fromVal = fromProp[prop];
-                    toVal = toProp[prop]
 
-                    flg = (fromVal && toVal);
+                    flg = (fromProp[prop] && toProp[prop]);
 
                     if (flg === 0 || flg) {
-                        b = fromVal;
-                        f = toVal;
-                        c = f - b;
-                        val = easeFunc(pos - fromFrame, b, c, d);
-                        ret[prop] = val;
+                        fromVal = fromProp[prop].getValues();
+                        toVal   = toProp[prop].getValues();
+                        tmp = [];
+
+                        for (var i = 0, l = fromVal.length; i < l; i += 3) {
+                            b = fromVal[i];
+                            f = toVal[i];
+                            c = f - b;
+                            tmp.push(easeFunc(pos - fromFrame, b, c, d));
+                        }
+
+                        ret[prop] = fromProp[prop].stringify(tmp);
                     }
                 }
 
-                ret = getUnitTypeAll(ret);
+                //ret = getUnitTypeAll(ret);
             }
 
             if ((action = keyframeActions[pos])) {
@@ -843,7 +1025,6 @@
 
             _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes, config);
             _keyframes.setParent(this);
-            _keyframes.on('update', this._onUpdate, this);
 
             this._keyframes = _keyframes;
             this._lastFrame = this.getLastFrame();
