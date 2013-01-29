@@ -250,6 +250,9 @@
             if (typeof tmp === 'number' || /^\d+(\.\d+)?$/.test(tmp)) {
                 ret[prop] = tmp + getUnitType(prop);
             }
+            else {
+                ret[prop] = tmp;
+            }
         }
 
         return ret;
