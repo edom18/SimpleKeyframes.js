@@ -882,6 +882,7 @@
                     if (flg === 0 || flg) {
                         fromVal = fromProp[prop].getValues();
                         toVal   = toProp[prop].getValues();
+                        tmp = [];
 
                         for (var i = 0, l = fromVal.length; i < l; i += 3) {
                             b = fromVal[i];
