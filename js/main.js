@@ -8,8 +8,8 @@
     var elms = [].slice.call(doc.querySelectorAll('.movie'));
 
     var movie1 = new Movie(elms[0], [
-        { frame: 10, properties: { width: 0 }, on: function () { this.playFor(); } },
-        { frame: 40, properties: { width: 300 }, on: function () { this.playBack(); } }
+        { frame: 10, properties: { width: '0px' }, on: function () { this.playFor(); } },
+        { frame: 40, properties: { width: '400px' }, on: function () { this.playBack(); } }
     ], {
         defaults: {
             timingFunction: 'easeInOutCubic'

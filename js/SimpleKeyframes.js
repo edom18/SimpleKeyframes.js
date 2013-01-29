@@ -107,15 +107,17 @@
         stringify: function (val) {
 
             var values = this._value,
-                ret    = this._type + '(';
+                cnt    = 0,
+                type   = this._type,
+                ret    = type ? this._type + '(' : '';
 
             for (var i = 0, l = values.length; i < l; i += 3) {
-                ret += values[i + 0];
-                ret += values[i + 1];
-                ret += values[i + 2] || '';
+                ret += val[cnt++]; //as number
+                ret += values[i + 1] || ''; // as unit
+                ret += values[i + 2] || ''; // as separator
             }
             
-            ret += ')';
+            ret += type ? ')' : '';
 
             return ret;
         },
@@ -240,10 +242,14 @@
     }
 
     function getUnitTypeAll(props) {
-        var ret = {};
+        var ret = {},
+            tmp;
 
         for (var prop in props) {
-            ret[prop] = props[prop] + getUnitType(prop);
+            tmp = props[prop];
+            if (typeof tmp === 'number' || /^\d+(\.\d+)?$/.test(tmp)) {
+                ret[prop] = tmp + getUnitType(prop);
+            }
         }
 
         return ret;
@@ -750,11 +756,45 @@
                 config = this._config;
 
             this.each(function (frame) {
+
+                var properties,
+                    vp;
+
                 if (frame) {
                     frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
 
                     if (isFunction(frame.on)) {
                         keyframeActions[frame.frame] = frame.on;
+                    }
+
+                    if (frame.properties) {
+                        frame.properties_ = {};
+                        properties = frame.properties;
+
+                        for (var prop in properties) {
+                            var div = doc.createElement('div');
+
+                            if (!prop in div.style) {
+                                delete properties[prop];
+                                continue;
+                            }
+
+                            if (typeof properties[prop] === 'number') {
+                                var unit = getUnitType(prop);
+                            }
+
+                            div.style[prop] = properties[prop] + (unit || '');
+
+                            if (!div.style[prop]) {
+                                delete properties[prop];
+                                continue;
+                            }
+
+                            vp = new ValueParser(properties[prop]);
+                            var tmp = vp.parse();
+
+                            frame.properties_[prop] = tmp;
+                        }
                     }
                 }
             }, this);
@@ -815,8 +855,11 @@
                 ret = getUnitTypeAll(from.properties);
             }
             else {
-                fromProp = from.properties;
-                toProp   = to.properties;
+                //fromProp = from.properties;
+                //toProp   = to.properties;
+
+                fromProp = from.properties_;
+                toProp   = to.properties_;
 
                 var fromFrame = from.frame,
                     f = 0,
@@ -826,20 +869,25 @@
                     val = 0,
                     unit = '',
                     action = null,
-                    flg = false;
+                    flg = false,
+                    tmp = [];
 
                 for (var prop in fromProp) {
-                    fromVal = fromProp[prop];
-                    toVal = toProp[prop]
 
-                    flg = (fromVal && toVal);
+                    flg = (fromProp[prop] && toProp[prop]);
 
                     if (flg === 0 || flg) {
-                        b = fromVal;
-                        f = toVal;
-                        c = f - b;
-                        val = easeFunc(pos - fromFrame, b, c, d);
-                        ret[prop] = val;
+                        fromVal = fromProp[prop].getValues();
+                        toVal   = toProp[prop].getValues();
+
+                        for (var i = 0, l = fromVal.length; i < l; i += 3) {
+                            b = fromVal[i];
+                            f = toVal[i];
+                            c = f - b;
+                            tmp.push(easeFunc(pos - fromFrame, b, c, d));
+                        }
+
+                        ret[prop] = fromProp[prop].stringify(tmp);
                     }
                 }
 
@@ -961,7 +1009,6 @@
 
             _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes, config);
             _keyframes.setParent(this);
-            _keyframes.on('update', this._onUpdate, this);
 
             this._keyframes = _keyframes;
             this._lastFrame = this.getLastFrame();
