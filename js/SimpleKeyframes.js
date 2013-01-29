@@ -104,6 +104,9 @@
         this._type  = val.type;
     }
     PropertyValue.prototype = {
+        toString: function () {
+            return this.stringify();
+        },
         stringify: function (val) {
 
             var values = this._value,
@@ -112,7 +115,7 @@
                 ret    = type ? this._type + '(' : '';
 
             for (var i = 0, l = values.length; i < l; i += 3) {
-                ret += val[cnt++]; //as number
+                ret += val ? val[cnt++] : values[i + 0]; //as number
                 ret += values[i + 1] || ''; // as unit
                 ret += values[i + 2] || ''; // as separator
             }
@@ -130,8 +133,9 @@
         constructor: PropertyValue
     };
 
-    function ValueParser (str) {
+    function ValueParser (prop, str) {
         this._str = str;
+        this._prop = prop;
         this._value = [];
         this._type = '';
     }
@@ -145,6 +149,7 @@
 
             if (typeof str === 'number') {
                 this._value.push(str);
+                this._value.push(getUnitType(this._prop));
             }
             else if (/^\d+$/.test(str)) {
                 this._value.push(+str);
@@ -793,7 +798,7 @@
                                 continue;
                             }
 
-                            vp = new ValueParser(properties[prop]);
+                            vp = new ValueParser(prop, properties[prop]);
                             var tmp = vp.parse();
 
                             frame.properties_[prop] = tmp;
@@ -807,6 +812,16 @@
             if ((frameItem = frames[frames.length - 1])) {
                 this._lastFrame = frameItem.frame;
             }
+        },
+
+        _makeProperties: function (properties) {
+            var ret = {};
+
+            for (var prop in properties) {
+                ret[prop] = properties[prop].toString();
+            }
+
+            return ret;
         },
 
         /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -852,15 +867,12 @@
             easeFunc = from.easing;
 
             if (!to) {
-                ret = getUnitTypeAll(from.properties);
+                ret = this._makeProperties(from.properties_);
             }
             else if (!easeFunc) {
-                ret = getUnitTypeAll(from.properties);
+                ret = this._makeProperties(from.properties_);
             }
             else {
-                //fromProp = from.properties;
-                //toProp   = to.properties;
-
                 fromProp = from.properties_;
                 toProp   = to.properties_;
 
@@ -895,7 +907,7 @@
                     }
                 }
 
-                ret = getUnitTypeAll(ret);
+                //ret = getUnitTypeAll(ret);
             }
 
             if ((action = keyframeActions[pos])) {
