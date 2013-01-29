@@ -99,6 +99,124 @@
 
     function noop (argument) { /* noop. */ }
 
+    function PropertyValue (val) {
+        this._value = val.value;
+        this._type  = val.type;
+    }
+    PropertyValue.prototype = {
+        stringify: function (val) {
+
+            var values = this._value,
+                ret    = this._type + '(';
+
+            for (var i = 0, l = values.length; i < l; i += 3) {
+                ret += values[i + 0];
+                ret += values[i + 1];
+                ret += values[i + 2] || '';
+            }
+            
+            ret += ')';
+
+            return ret;
+        },
+        getValues: function () {
+            return [].slice.call(this._value);
+        },
+        getType: function () {
+            return this._type;
+        },
+        constructor: PropertyValue
+    };
+
+    function ValueParser (str) {
+        this._str = str;
+        this._value = [];
+        this._type = '';
+    }
+
+    ValueParser.prototype = {
+        parse: function () {
+
+            var str = this._str,
+                reg = null,
+                m   = null;
+
+            if (typeof str === 'number') {
+                this._value.push(str);
+            }
+            else if (/^\d+$/.test(str)) {
+                this._value.push(+str);
+            }
+            //e.g. 5px | 5px 5px
+            else if (/\d/.test(str.charAt(0))) {
+                str = this._parse(str);
+            }
+
+            //e.g. rotate(90deg) | translate3d(1px, 2px, 3px)
+            else {
+                reg = /(\w+)\(/ig;
+                m = reg.exec(str);
+
+                if (m && m[1]) {
+                    this._type = m[1];
+                }
+
+                str = str.replace(reg, '');
+
+                if (!str) {
+                    throw new Error('Bad arguments');
+                }
+
+                str = this._parse(str);
+
+                reg = /\s*\)/i;
+                str = str.replace(reg, '');
+
+                if (str) {
+                    throw new Error('Bad arguments');
+                }
+            }
+
+            return new PropertyValue({
+                type : this._type,
+                value: this._value
+            });
+        },
+        _parse: function (str) {
+
+            var reg = null,
+                m   = null;
+
+            while (true) {
+                reg = /(\d+)(\.?\d+)*([a-z%]*)([\s,])?/i;
+                m = reg.exec(str);
+
+                if (!m || !m[0]) {
+                    break;
+                }
+
+                if (m[2]) {
+                    this._value.push(+(m[1] + m[2]));
+                }
+                else {
+                    this._value.push(+m[1]);
+                }
+
+                this._value.push(m[3] || '');
+
+                if (m[4]) {
+                    this._value.push(this._separate || m[4]);
+                    this._separate = this._separate || m[4];
+                }
+
+                str = str.replace(reg, '');
+            }
+
+            return str;
+        },
+        constructor: ValueParser
+    };
+
     var unitTypes = {};
 
     function getUnitType (prop) {
@@ -627,8 +745,8 @@
         _optimize: function () {
 
             var frameItem = null,
-                frames = this._frames,
                 keyframeActions = {},
+                frames = this._frames,
                 config = this._config;
 
             this.each(function (frame) {
