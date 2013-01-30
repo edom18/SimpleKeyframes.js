@@ -791,10 +791,15 @@
         _getKeyframes: function (pos) {
 
             var frames = this._frames,
-                len = frames.length,
-                from, to;
+                len  = frames.length,
+                from = null,
+                to   = null;
 
             while (len--) {
+                if (frames[len].frame === pos) {
+                    from = frames[len];
+                    break;
+                }
                 if (frames[len].frame <= pos) {
                     from = frames[len + 0];
                     to   = frames[len + 1];
@@ -902,14 +907,15 @@
 
         /**
          * @param {number} pos
+         * @return {?Object}
          */
-        getFrameAt: function (pos) {
+        getFrameAt: function (pos, dir) {
 
             var keyframeActions = this._keyframeActions,
-                keyframes = this._getKeyframes(pos),
                 lastFrame = this._lastFrame,
-                from = keyframes.from,
-                to   = keyframes.to,
+                keyframes = null,
+                from = null,
+                to   = null,
                 ret  = {},
 
                 easeFunc,
@@ -918,8 +924,19 @@
                 fromVal,
                 toVal;
 
+            //if (pos === this._prevPos && dir === this._dir) {
+            //    return null;
+            //}
+
+            this._prevPos = pos;
+            this._dir = dir;
+
+            keyframes = this._getKeyframes(pos);
+            from = keyframes.from;
+            to   = keyframes.to;
+
             if (!from) {
-                return;
+                return null;
             }
 
             easeFunc = from.easing;
@@ -1013,11 +1030,13 @@
 
             this._super(isTerminal);
 
+            //TODO
             if (this._stopped) {
                 return;
             }
 
-            var t  = this._frame,
+            var prevFrame = this._frame,
+                t  = this._frame,
                 el = this.el,
                 keyframes = this._keyframes,
                 props;
@@ -1039,11 +1058,15 @@
                 return;
             }
 
-            props = keyframes.getFrameAt(t);
+            props = keyframes.getFrameAt(t, this._reversing);
 
             for (var prop in props) {
                 el.style[prop] = props[prop];
             }
+
+            //if (this._stopped) {
+            //    this._frame = prevFrame;
+            //}
         },
 
         /**
