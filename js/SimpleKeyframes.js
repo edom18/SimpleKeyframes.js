@@ -246,23 +246,6 @@
         return unit;
     }
 
-    function getUnitTypeAll(props) {
-        var ret = {},
-            tmp;
-
-        for (var prop in props) {
-            tmp = props[prop];
-            if (typeof tmp === 'number' || /^\d+(\.\d+)?$/.test(tmp)) {
-                ret[prop] = tmp + getUnitType(prop);
-            }
-            else {
-                ret[prop] = tmp;
-            }
-        }
-
-        return ret;
-    }
-
     function each (arr, func, context) {
         if (Array.prototype.forEach) {
             arr.forEach(func, context);
@@ -909,8 +892,6 @@
                         ret[prop] = fromProp[prop].stringify(tmp);
                     }
                 }
-
-                //ret = getUnitTypeAll(ret);
             }
 
             if ((action = keyframeActions[pos])) {
