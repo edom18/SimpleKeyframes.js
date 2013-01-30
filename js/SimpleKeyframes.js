@@ -791,10 +791,15 @@
         _getKeyframes: function (pos) {
 
             var frames = this._frames,
-                len = frames.length,
-                from, to;
+                len  = frames.length,
+                from = null,
+                to   = null;
 
             while (len--) {
+                if (frames[len].frame === pos) {
+                    from = frames[len];
+                    break;
+                }
                 if (frames[len].frame <= pos) {
                     from = frames[len + 0];
                     to   = frames[len + 1];
@@ -903,7 +908,7 @@
         /**
          * @param {number} pos
          */
-        getFrameAt: function (pos) {
+        getFrameAt: function (pos, dir) {
 
             var keyframeActions = this._keyframeActions,
                 keyframes = this._getKeyframes(pos),
@@ -1039,7 +1044,7 @@
                 return;
             }
 
-            props = keyframes.getFrameAt(t);
+            props = keyframes.getFrameAt(t, this._reversing);
 
             for (var prop in props) {
                 el.style[prop] = props[prop];
