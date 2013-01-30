@@ -907,14 +907,15 @@
 
         /**
          * @param {number} pos
+         * @return {?Object}
          */
         getFrameAt: function (pos, dir) {
 
             var keyframeActions = this._keyframeActions,
-                keyframes = this._getKeyframes(pos),
                 lastFrame = this._lastFrame,
-                from = keyframes.from,
-                to   = keyframes.to,
+                keyframes = null,
+                from = null,
+                to   = null,
                 ret  = {},
 
                 easeFunc,
@@ -923,8 +924,19 @@
                 fromVal,
                 toVal;
 
+            //if (pos === this._prevPos && dir === this._dir) {
+            //    return null;
+            //}
+
+            this._prevPos = pos;
+            this._dir = dir;
+
+            keyframes = this._getKeyframes(pos);
+            from = keyframes.from;
+            to   = keyframes.to;
+
             if (!from) {
-                return;
+                return null;
             }
 
             easeFunc = from.easing;
@@ -1018,11 +1030,13 @@
 
             this._super(isTerminal);
 
+            //TODO
             if (this._stopped) {
                 return;
             }
 
-            var t  = this._frame,
+            var prevFrame = this._frame,
+                t  = this._frame,
                 el = this.el,
                 keyframes = this._keyframes,
                 props;
@@ -1049,6 +1063,10 @@
             for (var prop in props) {
                 el.style[prop] = props[prop];
             }
+
+            //if (this._stopped) {
+            //    this._frame = prevFrame;
+            //}
         },
 
         /**
