@@ -99,9 +99,10 @@
 
     function noop (argument) { /* noop. */ }
 
-    function PropertyValue (val) {
-        this._value = val.value;
-        this._type  = val.type;
+    function PropertyValue (types) {
+        this._types = types;
+        this._value = null;
+        this._optimize();
     }
     PropertyValue.prototype = {
         toString: function () {
@@ -109,117 +110,181 @@
         },
         stringify: function (val) {
 
-            var values = this._value,
+            var types = this._types,
+                type  = null,
+                values = [],
                 cnt    = 0,
-                type   = this._type,
-                ret    = type ? this._type + '(' : '';
+                ret    = '';
 
-            for (var i = 0, l = values.length; i < l; i += 3) {
-                ret += val ? val[cnt++] : values[i + 0]; //as number
-                ret += values[i + 1] || ''; // as unit
-                ret += values[i + 2] || ''; // as separator
+            for (var i = 0, l = types.length; i < l; ++i) {
+                type = types[i];
+
+                for (var prop in type) {
+                    values = type[prop];
+                    ret += prop !== '-' ? prop + '(' : '';
+
+                    for (var j = 0, k = values.length; j < k; j += 3) {
+                        ret += val ? val[cnt++] : values[j + 0]; //as number
+                        ret += values[j + 1] || ''; // as unit
+                        ret += values[j + 2] || ''; // as separator
+                    }
+
+                    ret += prop !== '-' ? ') ' : '';
+                }
             }
             
-            ret += type ? ')' : '';
 
             return ret;
         },
-        getValues: function () {
-            return [].slice.call(this._value);
+        _optimize: function () {
+
+            var ret = [],
+                types = this._types,
+                type = null,
+                value = [];
+
+            for (var i = 0, l = types.length; i < l; ++i) {
+                type = types[i];
+                for (var prop in type) {
+                    value = type[prop];
+
+                    for (var j = 0, k = value.length; j < k; ++j) {
+                        if (typeof value[j] === 'number') {
+                            ret.push(value[j]);
+                        }
+                    }
+                }
+            }
+
+            type = null;
+            types = null;
+
+            this._value = ret;
         },
-        getType: function () {
-            return this._type;
+        getValues: function () {
+            return this._value;
+        },
+        getTypes: function () {
+            return this._types;
         },
         constructor: PropertyValue
     };
 
     function ValueParser (prop, str) {
         this._str = str;
+        this._cur = str;
         this._prop = prop;
         this._value = [];
         this._type = '';
+        this._types = [];
     }
 
     ValueParser.prototype = {
         parse: function () {
 
-            var str = this._str,
+            var type = {},
                 reg = null,
                 m   = null;
 
-            if (typeof str === 'number') {
-                this._value.push(str);
-                this._value.push(getUnitType(this._prop));
-            }
-            else if (/^\d+$/.test(str)) {
-                this._value.push(+str);
-            }
-            //e.g. 5px | 5px 5px
-            else if (/\d/.test(str.charAt(0))) {
-                str = this._parse(str);
+            //type of number
+            if (typeof this._cur === 'number') {
+                type['-'] = [ this._cur, getUnitType(this._prop)];
+                this._types.push(type);
             }
 
-            //e.g. rotate(90deg) | translate3d(1px, 2px, 3px)
+            //type of like number.
+            else if (/^\d+$/.test(this._cur)) {
+                type['-'] = [ this._cur, getUnitType(this._prop)];
+                this._types.push(type);
+            }
+
+            /*!
+             * type of number with unit.
+             * e.g. 5px | 5px 5px
+             */
+            else if (/\d/.test(this._cur.charAt(0))) {
+                type['-'] = this._parse();
+                this._types.push(type);
+            }
+
+            /*!
+             * type of this._curing.
+             * e.g. rotate(90deg) | translate3d(1px, 2px, 3px) | scale(0) rotate(30deg)
+             */
             else {
-                reg = /(\w+)\(/ig;
-                m = reg.exec(str);
-
-                if (m && m[1]) {
-                    this._type = m[1];
-                }
-
-                str = str.replace(reg, '');
-
-                if (!str) {
-                    throw new Error('Bad arguments');
-                }
-
-                str = this._parse(str);
-
-                reg = /\s*\)/i;
-                str = str.replace(reg, '');
-
-                if (str) {
-                    throw new Error('Bad arguments');
-                }
+                this._parseWord();
             }
 
-            return new PropertyValue({
-                type : this._type,
-                value: this._value
-            });
+            return new PropertyValue(this._types);
         },
-        _parse: function (str) {
 
-            var reg = null,
+        _parseWord: function () {
+
+            var type = {};
+
+            //If context start as charactor, it is like string as type with '('.
+            var reg = /\s*(\w+)\(/i;
+            var m = reg.exec(this._cur);
+
+            if (!(m && m[1])) {
+                throw new Error('Parse error for property value.');
+            }
+
+            this._cur = this._cur.replace(reg, '');
+
+            if (!this._cur) {
+                throw new Error('Not fount end of context as ")" charactor.');
+            }
+
+            //parse for primitive.
+            type[m[1]] = this._parse();
+            this._types.push(type);
+
+            reg = /\s*\)/i;
+            this._cur = this._cur.replace(reg, '');
+
+            if (this._cur) {
+                this._parseWord();
+            }
+        },
+
+        /**
+         * Parse string.
+         *
+         * @return {Array}
+         */
+        _parse: function () {
+
+            var ret = [],
+                reg = null,
                 m   = null;
 
             while (true) {
-                reg = /(\d+)(\.?\d+)*([a-z%]*)([\s,])?/i;
-                m = reg.exec(str);
+                reg = /^\s*(-?\d+)(\.?\d+)*([a-z%]*)([\s,])?/i;
+                m = reg.exec(this._cur);
 
                 if (!m || !m[0]) {
                     break;
                 }
 
                 if (m[2]) {
-                    this._value.push(+(m[1] + m[2]));
+                    ret.push(+(m[1] + m[2]));
                 }
                 else {
-                    this._value.push(+m[1]);
+                    ret.push(+m[1]);
                 }
 
-                this._value.push(m[3] || '');
+                ret.push(m[3] || '');
 
                 if (m[4]) {
-                    this._value.push(this._separate || m[4]);
+                    ret.push(this._separate || m[4]);
                     this._separate = this._separate || m[4];
                 }
 
-                str = str.replace(reg, '');
+                this._cur = this._cur.replace(reg, '');
             }
 
-            return str;
+            return ret;
         },
         constructor: ValueParser
     };
@@ -244,23 +309,6 @@
         unitTypes[prop] = unit;
 
         return unit;
-    }
-
-    function getUnitTypeAll(props) {
-        var ret = {},
-            tmp;
-
-        for (var prop in props) {
-            tmp = props[prop];
-            if (typeof tmp === 'number' || /^\d+(\.\d+)?$/.test(tmp)) {
-                ret[prop] = tmp + getUnitType(prop);
-            }
-            else {
-                ret[prop] = tmp;
-            }
-        }
-
-        return ret;
     }
 
     function each (arr, func, context) {
@@ -899,7 +947,7 @@
                         toVal   = toProp[prop].getValues();
                         tmp = [];
 
-                        for (var i = 0, l = fromVal.length; i < l; i += 3) {
+                        for (var i = 0, l = fromVal.length; i < l; ++i) {
                             b = fromVal[i];
                             f = toVal[i];
                             c = f - b;
@@ -909,8 +957,6 @@
                         ret[prop] = fromProp[prop].stringify(tmp);
                     }
                 }
-
-                //ret = getUnitTypeAll(ret);
             }
 
             if ((action = keyframeActions[pos])) {
@@ -1047,5 +1093,6 @@
     exports.Crono = Crono;
     exports.Stage = Stage;
     exports.Movie = Movie;
+    exports.ValueParser = ValueParser;
 
 }(window, window.document, window.Class, window));

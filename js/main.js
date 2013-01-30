@@ -8,10 +8,11 @@
     var elms = [].slice.call(doc.querySelectorAll('.movie'));
 
     var movie1 = new Movie(elms[0], [
-        { frame: 10, properties: { width: 0, height: 0 }, on: function () { this.playFor(); } },
-        { frame: 40, properties: { width: 100, height: 100, left: 20 } },
-        { frame: 80, properties: { left: 200, '-webkit-transform': 'scale(1)' } },
-        { frame: 120, properties: { '-webkit-transform': 'scale(2)' }, on: function () { this.playBack(); } }
+        { frame: 10, properties: { '-webkit-transform': 'rotate(0deg)' }, on: function () { this.playFor(); } },
+        { frame: 40, properties: { '-webkit-transform': 'rotate(90deg) scale(1)' } },
+        { frame: 70, properties: { '-webkit-transform': 'rotate(90deg) scale(0.5)' } },
+        { frame: 100, properties: { '-webkit-transform': 'rotate(90deg) scale(0.5) translate3d(0px, 0px, 0px)' } },
+        { frame: 130, properties: { '-webkit-transform': 'rotate(90deg) scale(0.5) translate3d(100px, -20px, 0px)' }, on: function () { this.playBack(); } }
     ], {
         defaults: {
             timingFunction: 'easeInOutCubic'
@@ -78,7 +79,7 @@
         movie1,
         movie2, movie3, movie4,
         movie5, movie6
-        //movie7, movie8
+        //movie7, movie8,
         //movie9, movie10
     ]);
 
