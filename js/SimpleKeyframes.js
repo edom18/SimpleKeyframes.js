@@ -729,6 +729,12 @@
 
             this._stopped = false;
 
+            if (this._running) {
+                return;
+            }
+
+            this._running = true;
+
             (function loop() {
                 if (self._stopped) {
                     return;
@@ -744,6 +750,7 @@
         stop: function () {
             this._super();
             clearTimeout(this.frameTimer);
+            this._running = false;
         }
     });
 
