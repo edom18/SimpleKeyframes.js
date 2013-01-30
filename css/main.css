@@ -64,53 +64,81 @@ body {
 
 .movie {
   position: absolute;
-  left: 20px;
+  left: 0;
   top: 0;
   width: 100px;
   height: 100px;
   background-color: #ccc;
 }
 
-.movie1 {
-  top: 110px;
+.first {
+  position: relative;
+  left: 20px;
+  top: 20px;
+  width: 200px;
+  height: 200px;
 }
 
-.movie2 {
-  top: 220px;
+.secound {
+  position: absolute;
+  left: 300px;
+  top: -150px;
+  width: 50px;
+  height: 50px;
+  background-color: #c00;
 }
 
-.movie3 {
-  top: 330px;
+.btnPlayBack {
+  cursor: pointer;
+  position: absolute;
+  top: auto;
+  left: 50%;
+  bottom: 5px;
+  width: 200px;
+  height: auto;
+  padding: 5px;
+  margin-left: -100px;
+  text-align: center;
+  color: #fff;
+  background-color: rgba(0, 0, 0, 0.8);
+  -webkit-box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  -moz-box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
+  -webkit-transform: scale(0);
+  -moz-transform: scale(0);
+  -ms-transform: scale(0);
+  -o-transform: scale(0);
+  transform: scale(0);
+}
+
+.movie1, .movie2, .movie3 {
+  position: static;
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  color: #fff;
+  text-align: center;
+  background-color: rgba(0, 0, 0, 0.15);
+  line-height: 185px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+  -webkit-transform: scaleY(0);
+  -moz-transform: scaleY(0);
+  -ms-transform: scaleY(0);
+  -o-transform: scaleY(0);
+  transform: scaleY(0);
 }
 
 .movie4 {
-  top: 440px;
+  width: 100%;
+  height: 100%;
+  filter: progid:DXImageTransform.Microsoft.Alpha(Opacity=0);
+  opacity: 0;
 }
 
 .movie5 {
-  top: 550px;
-}
-
-.movie6 {
-  top: 660px;
-}
-
-.movie7 {
-  top: 770px;
-}
-
-.movie8 {
-  top: 880px;
-}
-
-.movie9 {
-  top: 990px;
-}
-
-.movie10 {
-  top: 1100px;
-}
-
-.movie4 {
+  width: 100%;
+  height: 100%;
   text-align: center;
 }

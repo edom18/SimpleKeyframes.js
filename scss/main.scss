@@ -11,19 +11,68 @@ body {
 
 .movie {
     position: absolute;
-    left: 20px;
+    left: 0;
     top: 0;
     width: 100px;
     height: 100px;
     background-color: #ccc;
 }
 
-@for $i from 1 through 10 {
-    .movie#{$i} {
-        top: #{$i * 110}px;
-    }
+.first {
+    position: relative;
+    left: 20px;
+    top: 20px;
+    width: 200px;
+    height: 200px;
+}
+
+.secound {
+    position: absolute;
+    left: 300px;
+    top: -150px;
+    width: 50px;
+    height: 50px;
+    background-color: #c00;
+}
+
+.btnPlayBack {
+    cursor: pointer;
+    position: absolute;
+    top: auto;
+    left: 50%;
+    bottom: 5px;
+    width: 200px;
+    height: auto;
+    padding: 5px;
+    margin-left: -100px;
+    text-align: center;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.8);
+    @include box-shadow(0 0 3px rgba(0, 0, 0, 0.5));
+    @include transform(scale(0));
+}
+
+.movie1, .movie2, .movie3 {
+    position: static;
+    width: 100%;
+    height: 100%;
+    padding: 5px;
+    color: #fff;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.15);
+    line-height: 185px;
+    @include box-sizing(border-box);
+    @include transform(scaleY(0));
 }
 
 .movie4 {
+    width: 100%;
+    height: 100%;
+    @include opacity(0);
+}
+
+.movie5 {
+    width: 100%;
+    height: 100%;
     text-align: center;
 }
