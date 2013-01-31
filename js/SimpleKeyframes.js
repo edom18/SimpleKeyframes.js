@@ -618,6 +618,8 @@
          */
         timeForward: function () {
             this._reversing = false;
+            this.play();
+
             this.each(function (child) {
                 child.timeForward();
             });
@@ -629,6 +631,8 @@
          */
         timeBackward: function () {
             this._reversing = true;
+            this.play();
+
             this.each(function (child) {
                 child.timeBackward();
             });
@@ -909,7 +913,7 @@
          * @param {number} pos
          * @return {?Object}
          */
-        getFrameAt: function (pos, dir) {
+        getFrameAt: function (pos) {
 
             var keyframeActions = this._keyframeActions,
                 lastFrame = this._lastFrame,
@@ -923,13 +927,6 @@
                 toProp,
                 fromVal,
                 toVal;
-
-            //if (pos === this._prevPos && dir === this._dir) {
-            //    return null;
-            //}
-
-            this._prevPos = pos;
-            this._dir = dir;
 
             keyframes = this._getKeyframes(pos);
             from = keyframes.from;
@@ -1030,13 +1027,11 @@
 
             this._super(isTerminal);
 
-            //TODO
             if (this._stopped) {
                 return;
             }
 
-            var prevFrame = this._frame,
-                t  = this._frame,
+            var t  = this._frame,
                 el = this.el,
                 keyframes = this._keyframes,
                 props;
@@ -1058,15 +1053,11 @@
                 return;
             }
 
-            props = keyframes.getFrameAt(t, this._reversing);
+            props = keyframes.getFrameAt(t);
 
             for (var prop in props) {
                 el.style[prop] = props[prop];
             }
-
-            //if (this._stopped) {
-            //    this._frame = prevFrame;
-            //}
         },
 
         /**
