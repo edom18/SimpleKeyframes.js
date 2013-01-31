@@ -308,6 +308,8 @@
         unit = unit.slice(1);
         unitTypes[prop] = unit;
 
+        div = null;
+
         return unit;
     }
 
@@ -846,29 +848,55 @@
                         properties = frame.properties;
 
                         for (var prop in properties) {
+                            var prop_ = '';
                             div  = doc.createElement('div');
                             unit = '';
 
-                            if (!prop in div.style) {
-                                delete properties[prop];
-                                continue;
+                            if (!(prop in div.style)) {
+                                //check prefix
+                                if (prop.charAt(0) === '-') {
+                                    var tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
+
+                                    //e.g. webkitTransform
+                                    var type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
+
+                                    //e.g. WebkitTransform
+                                    var ch = tmp[2].slice(0, 1).toUpperCase();
+                                    tmp[2] = tmp[2].slice(1);
+                                    var type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
+
+                                    if (type1 in div.style) {
+                                        prop_ = type1;
+                                    }
+                                    else if (type2 in div.style) {
+                                        prop_ = type2;
+                                    }
+                                    else {
+                                        delete properties[prop];
+                                        continue;
+                                    }
+                                }
+                                else {
+                                    delete properties[prop];
+                                    continue;
+                                }
                             }
 
                             if (typeof properties[prop] === 'number') {
                                 unit = getUnitType(prop);
                             }
 
-                            div.style[prop] = properties[prop] + (unit || '');
+                            div.style[prop_ || prop] = properties[prop] + (unit || '');
 
-                            if (!div.style[prop]) {
+                            if (!div.style[prop_ || prop]) {
                                 delete properties[prop];
                                 continue;
                             }
 
-                            vp = new ValueParser(prop, properties[prop]);
+                            vp = new ValueParser((prop_ || prop), properties[prop]);
                             var tmp = vp.parse();
 
-                            frame.properties_[prop] = tmp;
+                            frame.properties_[prop_ || prop] = tmp;
                         }
                     }
                 }
