@@ -832,6 +832,10 @@
             this.each(function (frame) {
 
                 var properties,
+                    prop_ = '',
+                    tmp  = [],
+                    ch   = '',
+                    type1, type2,
                     unit = '',
                     div  = null,
                     vp   = null;
@@ -848,22 +852,22 @@
                         properties = frame.properties;
 
                         for (var prop in properties) {
-                            var prop_ = '';
+                            prop_ = '';
                             div  = doc.createElement('div');
                             unit = '';
 
                             if (!(prop in div.style)) {
                                 //check prefix
                                 if (prop.charAt(0) === '-') {
-                                    var tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
+                                    tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
 
                                     //e.g. webkitTransform
-                                    var type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
+                                    type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
 
                                     //e.g. WebkitTransform
-                                    var ch = tmp[2].slice(0, 1).toUpperCase();
+                                    ch = tmp[2].slice(0, 1).toUpperCase();
                                     tmp[2] = tmp[2].slice(1);
-                                    var type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
+                                    type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
 
                                     if (type1 in div.style) {
                                         prop_ = type1;
