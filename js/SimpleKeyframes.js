@@ -1043,6 +1043,9 @@
 
         dispose: function (removeNode) {
             this._super(removeNode);
+            this.each(function (child) {
+                child.dispose();
+            });
             this._parent.remove(this);
             this._keyframes.dispose();
             this._keyframes = null;
