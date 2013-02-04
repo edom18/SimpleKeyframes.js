@@ -200,9 +200,9 @@
 
             /*!
              * type of number with unit.
-             * e.g. 5px | 5px 5px
+             * e.g. 5px | -5px | 5px 5px
              */
-            else if (/\d/.test(this._cur.charAt(0))) {
+            else if (/[-\d]/.test(this._cur.charAt(0))) {
                 type['-'] = this._parse();
                 this._types.push(type);
             }
