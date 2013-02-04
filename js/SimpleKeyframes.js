@@ -1032,9 +1032,12 @@
         init: function (el, keyframes, config) {
             this._super();
 
+            config || (config = {});
+
             this.el     = el;
             this._index = 0;
 
+            this._autoDestroy = config.autoDestroy;
             this.setKeyframes(keyframes, config);
         },
 
@@ -1059,6 +1062,8 @@
 
             this._super(isTerminal);
 
+            var lastFrame = this._lastFrame;
+
             if (this._stopped) {
                 return;
             }
@@ -1071,7 +1076,7 @@
             if (this._reversing) {
                 --t;
             }
-            else if (!isTerminal || this._lastFrame > t) {
+            else if (!isTerminal || lastFrame > t) {
                 ++t;
             }
 
@@ -1080,6 +1085,11 @@
             }
 
             this._frame = t;
+
+            if (this._autoDestroy === true && t === lastFrame) {
+                this.dispose();
+                return;
+            }
 
             if (!el) {
                 return;
