@@ -1089,6 +1089,12 @@
 
             this._frame = t;
 
+            if (this._prevT === t) {
+                return;
+            }
+
+            this._prevT = t;
+
             if (this._autoDestroy === true && t === lastFrame) {
                 this.dispose(true);
                 return;
