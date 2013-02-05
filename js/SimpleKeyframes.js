@@ -1100,11 +1100,11 @@
                 return;
             }
 
+            props = keyframes.getFrameAt(t);
+
             if (!el) {
                 return;
             }
-
-            props = keyframes.getFrameAt(t);
 
             for (var prop in props) {
                 el.style[prop] = props[prop];
