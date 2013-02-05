@@ -548,7 +548,7 @@
         _getLastFrame: function () {
             var children = this._children,
                 len = children.length,
-                ret = 0,
+                ret = this.getLastFrame(),
                 max = Math.max;
 
             while (len--) {
