@@ -1038,6 +1038,7 @@
             this._index = 0;
 
             this._autoDestroy = config.autoDestroy;
+            this._autoDispose = config.autoDispose;
             this.setKeyframes(keyframes, config);
         },
 
@@ -1095,19 +1096,22 @@
 
             this._prevT = t;
 
+            props = keyframes.getFrameAt(t);
+
+            if (el) {
+                for (var prop in props) {
+                    el.style[prop] = props[prop];
+                }
+            }
+
             if (this._autoDestroy === true && t === lastFrame) {
                 this.dispose(true);
                 return;
             }
 
-            props = keyframes.getFrameAt(t);
-
-            if (!el) {
+            if (this._autoDispose === true && t === lastFrame) {
+                this.dispose();
                 return;
-            }
-
-            for (var prop in props) {
-                el.style[prop] = props[prop];
             }
         },
 
