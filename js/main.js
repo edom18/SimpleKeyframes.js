@@ -79,20 +79,29 @@
         movie6, secound
     ]);
 
-    doc.querySelector('.btnPlayBack').addEventListener('click', function (e) {
+    function addEvent(node, type, func) {
+        if (node.addEventListener) {
+            node.addEventListener(type, func, false);
+        }
+        else {
+            node.attachEvent('on' + type, func);
+        }
+    }
+
+    addEvent(doc.querySelector('.btnPlayBack'), 'click', function (e) {
         stage.timeBackward();
-    }, false);
+    });
 
     var flg = false;
     var starged = false;
-    doc.querySelector('input').addEventListener('click', function (e) {
+    addEvent(doc.querySelector('input'), 'click', function (e) {
         if (!starged) {
             starged = true;
             stage.run();
         }
 
         (flg = !flg) ? stage.timeForward() : stage.timeBackward();
-    }, false);
+    });
 
 //    window.addEventListener('load', function (e) {
 //        stage.run();
