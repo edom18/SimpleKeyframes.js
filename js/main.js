@@ -5,7 +5,7 @@
     ////////////////////////////////////////////////////////////////
 
     var stage = new Stage();
-    var elms = [].slice.call(doc.querySelectorAll('.movie'));
+    var elms = doc.querySelectorAll('.movie');
 
     var movie1 = new Movie(elms[0], [
         { frame: 30, properties: { '-webkit-transform': 'scaleY(0)' } },
