@@ -873,7 +873,10 @@
 
         _checkFilter: function (prop) {
             var filterMap = {
-                opacity: true
+                opacity: {
+                    name: 'alpha',
+                    magni: 100
+                }
             };
 
             return filterMap[prop];
@@ -898,6 +901,7 @@
                 var properties,
                     prop_ = '',
                     tmp  = [],
+                    filterType = [],
                     ch   = '',
                     type1, type2,
                     unit = '',
@@ -918,8 +922,12 @@
                         div  = doc.createElement('div');
                         unit = '';
 
-                        if (this.isMSIEUnder8 && this._checkFilter(prop)) {
+                        if (this.isMSIEUnder8 && (filterType = this._checkFilter(prop))) {
                             prop_ = 'filter';
+                            if (filterType.magni) {
+                                properties[prop] *= filterType.magni;
+                            }
+                            properties[prop] = filterType.name + '(' + prop + '=' + properties[prop] + ')'
                         }
 
                         if (!(prop in div.style)) {
