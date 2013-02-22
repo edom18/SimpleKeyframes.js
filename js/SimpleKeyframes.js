@@ -122,21 +122,28 @@
             return this.stringify();
         },
         stringify: function (val) {
-
             var types = this._types,
                 type  = null,
                 values = [],
                 cnt    = 0,
-                ret    = '';
+                ret    = '',
+                isFilter = false;
 
             for (var i = 0, l = types.length; i < l; ++i) {
                 type = types[i];
 
                 for (var prop in type) {
                     values = type[prop];
-                    ret += prop !== '-' ? prop + '(' : '';
+                    isFilter = (typeof values[0] === 'string');
 
-                    for (var j = 0, k = values.length; j < k; j += 3) {
+                    if (isFilter) {
+                        ret += prop + '(' + values[0] + '=';
+                    }
+                    else if (prop !== '-') {
+                        ret += prop + '(';
+                    }
+
+                    for (var j = isFilter ? 1 : 0, k = values.length; j < k; j += 3) {
                         ret += val ? val[cnt++] : values[j + 0]; //as number
                         ret += values[j + 1] || ''; // as unit
                         ret += values[j + 2] || ''; // as separator
@@ -145,7 +152,6 @@
                     ret += prop !== '-' ? ') ' : '';
                 }
             }
-            
 
             return ret;
         },
@@ -158,6 +164,7 @@
 
             for (var i = 0, l = types.length; i < l; ++i) {
                 type = types[i];
+
                 for (var prop in type) {
                     value = type[prop];
 
@@ -201,13 +208,13 @@
 
             //type of number
             if (typeof this._cur === 'number') {
-                type['-'] = [ this._cur, getUnitType(this._prop)];
+                type['-'] = [this._cur, getUnitType(this._prop)];
                 this._types.push(type);
             }
 
             //type of like number.
             else if (/^\d+$/.test(this._cur)) {
-                type['-'] = [ this._cur, getUnitType(this._prop)];
+                type['-'] = [this._cur, getUnitType(this._prop)];
                 this._types.push(type);
             }
 
@@ -250,7 +257,13 @@
             }
 
             //parse for primitive.
-            type[m[1]] = this._parse();
+            if (!/[-\d]/.test(this._cur.charAt(0))) {
+                type[m[1]] = this._parseFilter();
+            }
+            else {
+                type[m[1]] = this._parse();
+            }
+
             this._types.push(type);
 
             reg = /\s*\)/i;
@@ -259,6 +272,24 @@
             if (this._cur) {
                 this._parseWord();
             }
+        },
+
+        /**
+         * Parse filer in ()
+         * @return {Array.<string>}
+         */
+        _parseFilter: function () {
+            var reg = /(\w+)=(\d+)(\w*)/i,
+                m = reg.exec(this._cur);
+
+            this._cur = this._cur.replace(reg, '');
+
+            if (!/^\s*\)\s*$/.test(this._cur)) {
+                throw new Error('Parse error as inner ().');
+            }
+
+            //filter name, filter number, filter unit
+            return [m[1], +m[2], m[3]];
         },
 
         /**
@@ -844,6 +875,10 @@
 
             this.each(function (frame) {
 
+                if (!frame) {
+                    return
+                }
+
                 var properties,
                     prop_ = '',
                     tmp  = [],
@@ -853,68 +888,65 @@
                     div  = null,
                     vp   = null;
 
-                if (frame) {
-                    frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
+                frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
 
-                    if (isFunction(frame.on)) {
-                        keyframeActions[frame.frame] = frame.on;
-                    }
+                if (isFunction(frame.on)) {
+                    keyframeActions[frame.frame] = frame.on;
+                }
 
-                    if (frame.properties) {
-                        frame.properties_ = {};
-                        properties = frame.properties;
+                if ((properties = frame.properties)) {
+                    frame.properties_ = {};
 
-                        for (var prop in properties) {
-                            prop_ = '';
-                            div  = doc.createElement('div');
-                            unit = '';
+                    for (var prop in properties) {
+                        prop_ = '';
+                        div  = doc.createElement('div');
+                        unit = '';
 
-                            if (!(prop in div.style)) {
-                                //check prefix
-                                if (prop.charAt(0) === '-') {
-                                    tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
+                        if (!(prop in div.style)) {
+                            //check prefix
+                            if (prop.charAt(0) === '-') {
+                                tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
 
-                                    //e.g. webkitTransform
-                                    type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
+                                //e.g. webkitTransform
+                                type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
 
-                                    //e.g. WebkitTransform
-                                    ch = tmp[2].slice(0, 1).toUpperCase();
-                                    tmp[2] = tmp[2].slice(1);
-                                    type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
+                                //e.g. WebkitTransform
+                                ch = tmp[2].slice(0, 1).toUpperCase();
+                                tmp[2] = tmp[2].slice(1);
+                                type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
 
-                                    if (type1 in div.style) {
-                                        prop_ = type1;
-                                    }
-                                    else if (type2 in div.style) {
-                                        prop_ = type2;
-                                    }
-                                    else {
-                                        delete properties[prop];
-                                        continue;
-                                    }
+                                if (type1 in div.style) {
+                                    prop_ = type1;
+                                }
+                                else if (type2 in div.style) {
+                                    prop_ = type2;
                                 }
                                 else {
                                     delete properties[prop];
                                     continue;
                                 }
                             }
-
-                            if (typeof properties[prop] === 'number') {
-                                unit = getUnitType(prop);
+                            else {
+                                //delete properties[prop];
+                                //continue;
                             }
-
-                            div.style[prop_ || prop] = properties[prop] + (unit || '');
-
-                            if (!div.style[prop_ || prop]) {
-                                delete properties[prop];
-                                continue;
-                            }
-
-                            vp = new ValueParser((prop_ || prop), properties[prop]);
-                            var tmp = vp.parse();
-
-                            frame.properties_[prop_ || prop] = tmp;
                         }
+
+                        if (typeof properties[prop] === 'number') {
+                            unit = getUnitType(prop);
+                        }
+
+                        div.style[prop_ || prop] = properties[prop] + (unit || '');
+
+                        if (!div.style[prop_ || prop]) {
+                            //delete properties[prop];
+                            //continue;
+                        }
+
+                        vp = new ValueParser((prop_ || prop), properties[prop]);
+                        var tmp = vp.parse();
+
+                        frame.properties_[prop_ || prop] = tmp;
                     }
                 }
             }, this);
