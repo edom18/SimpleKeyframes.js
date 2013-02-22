@@ -812,6 +812,14 @@
      * Disposal <- EvtEmit
      */
     var Keyframes = EvtEmit.extend({
+        isMSIEUnder8: (function () {
+            var isMsie  = navigator.userAgent.indexOf('MSIE') > -1,
+                version = /msie\s+([\.\d]+)/i.exec(navigator.userAgent);
+
+            version = version ? +version[1] : null;
+
+            return isMsie && (version <= 8);
+        }()),
         init: function (frames, config) {
 
             config || (config = {});
@@ -862,6 +870,14 @@
                 to: to
             };
         },
+
+        _checkFilter: function (prop) {
+            var filterMap = {
+                opacity: true
+            };
+
+            return filterMap[prop];
+        },
         
         /**
          * Optimize data.
@@ -901,6 +917,10 @@
                         prop_ = '';
                         div  = doc.createElement('div');
                         unit = '';
+
+                        if (this.isMSIEUnder8 && this._checkFilter(prop)) {
+                            prop_ = 'filter';
+                        }
 
                         if (!(prop in div.style)) {
                             //check prefix
