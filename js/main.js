@@ -8,11 +8,11 @@
     var elms = [].slice.call(doc.querySelectorAll('.movie'));
 
     var movie1 = new Movie(elms[0], [
-        { frame: 10, properties: { '-webkit-transform': 'rotate(0deg)' }, on: function () { this.playFor(); } },
-        { frame: 40, properties: { '-webkit-transform': 'rotate(90deg) scale(1)' } },
-        { frame: 70, properties: { '-webkit-transform': 'rotate(90deg) scale(0.5)' } },
-        { frame: 100, properties: { '-webkit-transform': 'rotate(90deg) scale(0.5) translate3d(0px, 0px, 0px)' } },
-        { frame: 130, properties: { '-webkit-transform': 'rotate(90deg) scale(0.5) translate3d(100px, -20px, 0px)' }, on: function () { this.playBack(); } }
+        { frame: 10, properties: { '@transform': 'rotate(0deg)' }, on: function () { this.playFor(); } },
+        { frame: 40, properties: { '@transform': 'rotate(90deg) scale(1)' } },
+        { frame: 70, properties: { '@transform': 'rotate(90deg) scale(0.5)' } },
+        { frame: 100, properties: { '@transform': 'rotate(90deg) scale(0.5) translate3d(0px, 0px, 0px)' } },
+        { frame: 130, properties: { '@transform': 'rotate(90deg) scale(0.5) translate3d(100px, -20px, 0px)' }, on: function () { this.playBack(); } }
     ], {
         defaults: {
             timingFunction: 'easeInOutCubic'
