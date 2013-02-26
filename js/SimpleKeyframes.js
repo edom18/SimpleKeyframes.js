@@ -1,6 +1,6 @@
 /**
  * This script give simple keyframe system.
- * @version 0.0.1
+ * @version 0.0.2
  * @author Kazuya Hiruma
  * @email edo.m18@gmail.com
  * @blog http://css-eblog.com/
