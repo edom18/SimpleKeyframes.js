@@ -1211,7 +1211,7 @@
          * @param {number} pos
          */
         go: function (pos) {
-            this._frame = +pos;
+            this._frame = +pos - 1;
         },
 
         /**
