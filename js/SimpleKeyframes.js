@@ -194,6 +194,11 @@
         constructor: PropertyValue
     };
 
+    /**
+     * @constructor
+     * @param {string} prop A property name.
+     * @param {string} str A property value.
+     */
     function ValueParser (prop, str) {
         this._str = str;
         this._cur = str;
@@ -848,7 +853,7 @@
             PRIVATE METHODS.
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
         /**
-         * @param {number} pos
+         * @param {number} pos As frame position.
          */
         _getKeyframes: function (pos) {
 
