@@ -1226,15 +1226,6 @@
 
             this._keyframes = _keyframes;
             this._lastFrame = this.getLastFrame();
-        },
-        
-
-        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            PRIVATE METHODS.
-        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-        _onUpdate: function (data) {
-            //this.stop();
-            //this._frame = data.lastFrame;
         }
     });
 
