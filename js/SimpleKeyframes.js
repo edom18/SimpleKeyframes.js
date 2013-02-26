@@ -155,6 +155,10 @@
 
             return ret;
         },
+
+        /**
+         * Optimize to list property value list.'
+         */
         _optimize: function () {
 
             var ret = [],
