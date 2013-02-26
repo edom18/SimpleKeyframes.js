@@ -110,6 +110,10 @@
         }
     };
 
+    var prefixList = [
+        '-webkit-', '-moz-', '-ms-'
+    ];
+
     function noop (argument) { /* noop. */ }
 
     function PropertyValue (types) {
@@ -912,7 +916,7 @@
                     tmp  = [],
                     filterType = [],
                     ch   = '',
-                    type1, type2,
+                    type1, type2, propType,
                     unit = '',
                     div  = null,
                     vp   = null;
@@ -941,26 +945,31 @@
 
                         if (!(prop in div.style)) {
                             //check prefix
-                            if (prop.charAt(0) === '-') {
-                                tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
+                            if (prop.charAt(0) === '@') {
+                                for (var i = 0, l = prefixList.length; i < l; ++i) {
+                                    propType = prefixList[i] + prop.slice(1);
+                                    tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(propType);
 
-                                //e.g. webkitTransform
-                                type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
+                                    //e.g. webkitTransform
+                                    type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
 
-                                //e.g. WebkitTransform
-                                ch = tmp[2].slice(0, 1).toUpperCase();
-                                tmp[2] = tmp[2].slice(1);
-                                type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
+                                    //e.g. WebkitTransform
+                                    ch = tmp[2].slice(0, 1).toUpperCase();
+                                    tmp[2] = tmp[2].slice(1);
+                                    type2 = ch + tmp[2] + tmp[3].toUpperCase() + tmp[4];
 
-                                if (type1 in div.style) {
-                                    prop_ = type1;
+                                    if (type1 in div.style) {
+                                        prop_ = type1;
+                                        break;
+                                    }
+                                    else if (type2 in div.style) {
+                                        prop_ = type2;
+                                        break;
+                                    }
                                 }
-                                else if (type2 in div.style) {
-                                    prop_ = type2;
-                                }
-                                else {
+
+                                if (!prop_) {
                                     delete properties[prop];
-                                    continue;
                                 }
                             }
                             else {
