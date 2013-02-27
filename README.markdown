@@ -18,6 +18,8 @@ Keyframes
 
 ##Methods
 
+* play
+* stop
 * playFor
 * playBack
 * gotoAndPlay
