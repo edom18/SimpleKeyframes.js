@@ -968,8 +968,9 @@
                                     }
                                 }
 
-                                if (!prop_) {
+                                if (prop_ === '') {
                                     delete properties[prop];
+                                    continue;
                                 }
                             }
                             else {
