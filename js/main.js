@@ -20,8 +20,8 @@
     });
 
     var movie2 = new Movie(elms[1], [
-        { frame: 10, properties: { width: 0, height: 0 }, on: function () { this.playFor(); } },
-        { frame: 140, properties: { width: 300, height: 100 }, on: function () { this.playBack(); } }
+        { frame: 10, properties: { width: '+=50', height: 0 }, on: function () { this.playFor(); } },
+        { frame: 140, properties: { width: '+=100', height: 100 }, on: function () { this.playBack(); } }
     ], {
         defaults: {
             timingFunction: 'easeInOutCubic'
@@ -29,8 +29,8 @@
     });
 
     var movie3 = new Movie(elms[2], [
-        { frame: 40, properties: { opacity: 0 }, on: function () { this.playFor(); } },
-        { frame: 80, properties: { opacity: 1 }, on: function () { this.playBack(); } }
+        { frame: 40, properties: { opacity: 0, top: '-=30' }, on: function () { this.playFor(); } },
+        { frame: 80, properties: { opacity: 1, top: '+=70' }, on: function () { this.playBack(); } }
     ], {
         defaults: {
             timingFunction: 'easeInOutCubic'

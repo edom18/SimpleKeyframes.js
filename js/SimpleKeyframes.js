@@ -203,12 +203,12 @@
      * @param {string} prop A property name.
      * @param {string} str A property value.
      */
-    function ValueParser (prop, str) {
-        this._str = str;
-        this._cur = str;
+    function ValueParser (el, prop, str) {
+        this.el    = el;
+        this._cur  = str;
         this._prop = prop;
         this._value = [];
-        this._type = '';
+        this._type  = '';
         this._types = [];
     }
 
@@ -216,6 +216,8 @@
         parse: function () {
 
             var type = {},
+                curval = null,
+                delta  = 0,
                 reg = null,
                 m   = null;
 
@@ -229,6 +231,22 @@
             else if (/^\d+$/.test(this._cur)) {
                 type['-'] = [this._cur, getUnitType(this._prop)];
                 this._types.push(type);
+            }
+
+            else if (/^\s*[-+]=(\d+)/.test(this._cur)) {
+                if (!this.el) {
+                    return null;
+                }
+
+                curval = win.getComputedStyle(this.el, '')[this._prop];
+
+                if (curval) {
+                    delta = +RegExp.$1;
+                    curval = parseInt(curval, 10);
+                    curval += (this._cur.indexOf('+=') > -1) ? delta : -delta;
+                    type['-'] = [curval, getUnitType(this._prop)];
+                    this._types.push(type);
+                }
             }
 
             /*!
@@ -833,7 +851,7 @@
 
             return isMsie && (version <= 8);
         }()),
-        init: function (frames, config) {
+        init: function (el, frames, config) {
 
             config || (config = {});
             config.defaults || (config.defaults = {});
@@ -842,6 +860,7 @@
                 frames = [frames];
             }
 
+            this.el = el;
             this._frames = frames;
             this._config = config;
             this._optimize();
@@ -990,7 +1009,7 @@
                             //continue;
                         }
 
-                        vp = new ValueParser((prop_ || prop), properties[prop]);
+                        vp = new ValueParser(this.el, (prop_ || prop), properties[prop]);
                         var tmp = vp.parse();
 
                         frame.properties_[prop_ || prop] = tmp;
@@ -1240,7 +1259,7 @@
         setKeyframes: function (keyframes, config) {
             var _keyframes = null;
 
-            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes, config);
+            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(this.el, keyframes, config);
             _keyframes.setParent(this);
 
             this._keyframes = _keyframes;
