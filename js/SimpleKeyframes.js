@@ -114,7 +114,64 @@
         '-webkit-', '-moz-', '-ms-'
     ];
 
+    var unitTypes = {};
+
     function noop (argument) { /* noop. */ }
+
+    function getUnitType (prop) {
+        if (unitTypes[prop] !== undefined) {
+            return unitTypes[prop];
+        }
+
+        var div = doc.createElement('div');
+
+        if (!prop in div.style) {
+            return null;
+        }
+
+        div.style[prop] = 0;
+
+        var unit = '' + div.style[prop];
+        unit = unit.slice(1);
+        unitTypes[prop] = unit;
+
+        div = null;
+
+        return unit;
+    }
+
+    function each (arr, func, context) {
+        if (Array.prototype.forEach) {
+            arr.forEach(func, context);
+        }
+        else {
+            for (var i = 0, l = arr.length; i < l; ++i) {
+                func.call(context || arr, arr[i]);
+            }
+        }
+    }
+
+    function isFunction (arg) {
+        return ({}).toString.call(arg) === '[object Function]';
+    }
+
+    /**
+     * Dispose class
+     * @constructor
+     */
+    var Disposal = Class.extend({
+        disposeInternal: noop,
+        dispose: function (removeNode) {
+            var el = this.el;
+
+            if (removeNode && el) {
+                el.parentNode.removeChild(el);
+                this.el = null;
+            }
+
+            this.disposeInternal.apply(this, arguments);
+        }
+    });
 
     function PropertyValue (types) {
         this._types = types;
@@ -203,16 +260,24 @@
      * @param {string} prop A property name.
      * @param {string} str A property value.
      */
-    function ValueParser (el, prop, str) {
-        this.el    = el;
-        this._cur  = str;
-        this._prop = prop;
-        this._value = [];
-        this._type  = '';
-        this._types = [];
-    }
-
-    ValueParser.prototype = {
+    var ValueParser = Disposal.extend({
+        init: function (el, prop, str) {
+            this.el    = el;
+            this._cur  = str;
+            this._prop = prop;
+            this._value = [];
+            this._type  = '';
+            this._types = [];
+        },
+        /** @override */
+        disposeInternal: function () {
+            this.el     = null;
+            this._cur   = null;
+            this._prop  = null;
+            this._value = null;
+            this._type  = null;
+            this._types = null;
+        },
         parse: function () {
 
             var type = {},
@@ -360,64 +425,6 @@
             }
 
             return ret;
-        },
-        constructor: ValueParser
-    };
-
-    var unitTypes = {};
-
-    function getUnitType (prop) {
-        if (unitTypes[prop] !== undefined) {
-            return unitTypes[prop];
-        }
-
-        var div = doc.createElement('div');
-
-        if (!prop in div.style) {
-            return null;
-        }
-
-        div.style[prop] = 0;
-
-        var unit = '' + div.style[prop];
-        unit = unit.slice(1);
-        unitTypes[prop] = unit;
-
-        div = null;
-
-        return unit;
-    }
-
-    function each (arr, func, context) {
-        if (Array.prototype.forEach) {
-            arr.forEach(func, context);
-        }
-        else {
-            for (var i = 0, l = arr.length; i < l; ++i) {
-                func.call(context || arr, arr[i]);
-            }
-        }
-    }
-
-    function isFunction (arg) {
-        return ({}).toString.call(arg) === '[object Function]';
-    }
-
-    /**
-     * Dispose class
-     * @constructor
-     */
-    var Disposal = Class.extend({
-        disposeInternal: noop,
-        dispose: function (removeNode) {
-            var el = this.el;
-
-            if (removeNode && el) {
-                el.parentNode.removeChild(el);
-                this.el = null;
-            }
-
-            this.disposeInternal.apply(this, arguments);
         }
     });
 
@@ -1011,6 +1018,7 @@
 
                         vp = new ValueParser(this.el, (prop_ || prop), properties[prop]);
                         var tmp = vp.parse();
+                        vp.dispose();
 
                         frame.properties_[prop_ || prop] = tmp;
                     }
