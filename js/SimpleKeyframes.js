@@ -309,6 +309,10 @@
             this._type  = null;
             this._types = null;
         },
+
+        /**
+         * As interface.
+         */
         parse: function () {
 
             var type = {},
@@ -365,6 +369,9 @@
             return new PropertyValue(this._types);
         },
 
+        /**
+         * Parse a value as words.
+         */
         _parseWord: function () {
 
             var type = {};
@@ -403,6 +410,8 @@
 
         /**
          * Parse filer in ()
+         * Like this: translate(5px, 5px, 3px);
+         *
          * @return {Array.<string>}
          */
         _parseFilter: function () {
@@ -567,81 +576,17 @@
     //Shortcut.
     EvtEmit.fn = EvtEmit.prototype;
     EvtEmit.fn.fire = EvtEmit.fn.trigger;
-    EvtEmit.fn.on = EvtEmit.fn.bind;
-    EvtEmit.prototype.off = EvtEmit.fn.unbind;
-
-    /* ------------------------------------------------
-        Defined class method.
-    --------------------------------------------------- */
-    EvtEmit.attach = (function() {
-
-        var re = new RegExp('Object|Array|Date|Arguments', 'i');
-
-        /**
-         * util functions
-         */
-        function detectType(o) {
-            return Object.prototype.toString.call(o).replace(/^\[object (.+)\]$/, '$1');
-        }
-
-        function makeArray(args, sp) {
-            if (!sp) {
-                sp = 0;
-            }
-
-            return Array.prototype.slice.call(args, sp);
-        }
-
-        function _cloneObject(o, type) {
-
-            var newList = [],
-                i, e;
-
-            if(!type) {
-                type = detectType(o);
-            }
-            if (type == 'Array') {
-                for (i = 0; e = o[i];  i++) {
-                  newList.push(_cloneObject(e));
-                }
-
-                return newList;
-            }
-            else if (type == 'Object' || type == 'Arguments') {
-
-              return _extendObject({}, o, true);
-            }
-            else if (type == 'Date') {
-
-              return new Date(o.toString());
-            }
-            else {
-
-              return o;
-            }
-        }
-
-        function _extendObject(parent, obj, deepCopy) {
-
-            var val, type;
-
-            for (var key in obj) {
-                val = obj[key];
-                type = detectType(val);
-
-                parent[key] = (deepCopy && re.test(type)) ? _cloneObject(val, type) : val;
-            }
-
-            return parent;
-        }
-
-        return function(target) {
-            _extendObject(target, new EvtEmit, true);
-        };
-    })();
+    EvtEmit.fn.on   = EvtEmit.fn.bind;
+    EvtEmit.fn.off  = EvtEmit.fn.unbind;
 
     ////////////////////////////////////////////////////////
 
+
+    /**
+     * A main animation object in a Stage.
+     * @constructor
+     * Disposal <- EvtEmit
+     */
     var Crono = EvtEmit.extend({
         init: function () {
             this._children  = [];
@@ -802,6 +747,11 @@
 
     /////////////////////////////////////////////////////////////////
 
+
+    /**
+     * A stage object. It can has children of Crono class.
+     * Disposal <- EvtEmit <- Crono
+     */
     var Stage = Crono.extend({
         init: function () {
             this._super();
@@ -1178,6 +1128,11 @@
 
     /////////////////////////////////////////////////////////////////
     
+    /**
+     * Movie class.
+     * @constructor
+     * Disposal <- EvtEmit <- Crono
+     */
     var Movie = Crono.extend({
         init: function (el, keyframes, config) {
             this._super();
@@ -1310,6 +1265,5 @@
     exports.Crono = Crono;
     exports.Stage = Stage;
     exports.Movie = Movie;
-    exports.ValueParser = ValueParser;
 
 }(window, window.document, window.Class, window));
