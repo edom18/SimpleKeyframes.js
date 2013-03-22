@@ -588,6 +588,7 @@
      * Disposal <- EvtEmit
      */
     var Crono = EvtEmit.extend({
+        name: 'Crono',
         init: function () {
             this._children  = [];
             this._frame     = 0;
@@ -698,10 +699,9 @@
             });
         },
 
-        /**
-         * noop
-         */
-        getLastFrame: noop,
+        getLastFrame: function () {
+            return this._lastFrame || 0;
+        },
 
         /**
          * Every frame it is invoked.
@@ -753,6 +753,7 @@
      * Disposal <- EvtEmit <- Crono
      */
     var Stage = Crono.extend({
+        name: 'Stage',
         init: function () {
             this._super();
             this._stopped = true;
@@ -831,6 +832,7 @@
      * Disposal <- EvtEmit
      */
     var Keyframes = EvtEmit.extend({
+        name: 'Keyframes',
         isMSIEUnder8: (function () {
             var isMsie  = navigator.userAgent.indexOf('MSIE') > -1,
                 version = /msie\s+([\.\d]+)/i.exec(navigator.userAgent);
@@ -1134,6 +1136,7 @@
      * Disposal <- EvtEmit <- Crono
      */
     var Movie = Crono.extend({
+        name: 'Movie',
         init: function (el, keyframes, config) {
             this._super();
 
@@ -1164,6 +1167,7 @@
             return this._keyframes.getLastFrame();
         },
 
+        /**
         /**
          * @param {boolean} reverse
          */
