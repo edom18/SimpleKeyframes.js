@@ -114,16 +114,27 @@
         '-webkit-', '-moz-', '-ms-'
     ];
 
+    /*!
+     * for a cache.
+     */
     var unitTypes = {};
 
     function noop (argument) { /* noop. */ }
 
+    /**
+     * Get an unit type by prop.
+     * @param {string} prop A CSS property.
+     * @return {string} unit string.
+     */
     function getUnitType (prop) {
+
+        var div, unit;
+
         if (unitTypes[prop] !== undefined) {
             return unitTypes[prop];
         }
 
-        var div = doc.createElement('div');
+        div = doc.createElement('div');
 
         if (!prop in div.style) {
             return null;
@@ -131,7 +142,7 @@
 
         div.style[prop] = 0;
 
-        var unit = '' + div.style[prop];
+        unit = '' + div.style[prop];
         unit = unit.slice(1);
         unitTypes[prop] = unit;
 
@@ -140,6 +151,12 @@
         return unit;
     }
 
+    /**
+     * Give an each method.
+     * @param {Array} arr To use an each loop.
+     * @param {Function} func A Callback function.
+     * @param {Function?} context Will be called as context.
+     */
     function each (arr, func, context) {
         if (Array.prototype.forEach) {
             arr.forEach(func, context);
@@ -151,6 +168,11 @@
         }
     }
 
+    /**
+     * Return true if arg is a function.
+     * @param {*} arg
+     * @return {boolean} Return true if arg is a function.
+     */
     function isFunction (arg) {
         return ({}).toString.call(arg) === '[object Function]';
     }
@@ -173,12 +195,21 @@
         }
     });
 
+
+    /**
+     * PropertyValue class.
+     * This class give property values.
+     * @constructor
+     * @param {Array} types.
+     */
     function PropertyValue (types) {
         this._types = types;
         this._value = null;
         this._optimize();
     }
     PropertyValue.prototype = {
+        constructor: PropertyValue,
+
         toString: function () {
             return this.stringify();
         },
@@ -251,11 +282,11 @@
         },
         getTypes: function () {
             return this._types;
-        },
-        constructor: PropertyValue
+        }
     };
 
     /**
+     * Property value parser class.
      * @constructor
      * @param {string} prop A property name.
      * @param {string} str A property value.
