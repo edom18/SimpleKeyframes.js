@@ -1201,6 +1201,14 @@
 
             this._prevT = t;
 
+            // Fire event as animation end if frame is last frame.
+            if (t === lastFrame) {
+                this.fire('animationend', {
+                    frame: t,
+                    flow: this._reversing ? 'backward' : 'forward'
+                });
+            }
+
             props = keyframes.getFrameAt(t);
 
             if (el) {
