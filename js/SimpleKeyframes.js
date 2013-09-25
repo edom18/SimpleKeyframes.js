@@ -1,6 +1,6 @@
 /**
  * This script give simple keyframe system.
- * @version 0.0.1
+ * @version 0.0.3
  * @author Kazuya Hiruma
  * @email edo.m18@gmail.com
  * @blog http://css-eblog.com/
@@ -94,36 +94,148 @@
                 return c / 2 * t * t + b;
             }
             return -c / 2 * ((--t) * (t - 2) - 1) + b;
+        },
+        easeInBack: function (t, b, c, d, s) {
+            if (s == undefined) s = 1.70158;
+            return c * (t /= d) * t * ((s + 1) * t - s) + b;
+        },
+        easeOutBack: function (t, b, c, d, s) {
+            if (s == undefined) s = 1.70158;
+            return c * ((t = t / d - 1) * t * ((s + 1) * t + s) + 1) + b;
+        },
+        easeInOutBack: function (t, b, c, d, s) {
+            if (s == undefined) s = 1.70158; 
+            if ((t /= d / 2) < 1) return c / 2 * (t * t * (((s *= (1.525)) + 1) * t - s)) + b;
+            return c / 2 * ((t -= 2) * t * (((s *= (1.525)) + 1) * t + s) + 2) + b;
         }
     };
 
+    var prefixList = [
+        '-webkit-', '-moz-', '-ms-'
+    ];
+
+    /*!
+     * for a cache.
+     */
+    var unitTypes = {};
+
     function noop (argument) { /* noop. */ }
 
+    /**
+     * Get an unit type by prop.
+     * @param {string} prop A CSS property.
+     * @return {string} unit string.
+     */
+    function getUnitType (prop) {
+
+        var div, unit;
+
+        if (unitTypes[prop] !== undefined) {
+            return unitTypes[prop];
+        }
+
+        div = doc.createElement('div');
+
+        if (!prop in div.style) {
+            return null;
+        }
+
+        div.style[prop] = 0;
+
+        unit = '' + div.style[prop];
+        unit = unit.slice(1);
+        unitTypes[prop] = unit;
+
+        div = null;
+
+        return unit;
+    }
+
+    /**
+     * Give an each method.
+     * @param {Array} arr To use an each loop.
+     * @param {Function} func A Callback function.
+     * @param {Function?} context Will be called as context.
+     */
+    function each (arr, func, context) {
+        if (Array.prototype.forEach) {
+            arr.forEach(func, context);
+        }
+        else {
+            for (var i = 0, l = arr.length; i < l; ++i) {
+                func.call(context || arr, arr[i]);
+            }
+        }
+    }
+
+    /**
+     * Return true if arg is a function.
+     * @param {*} arg
+     * @return {boolean} Return true if arg is a function.
+     */
+    function isFunction (arg) {
+        return ({}).toString.call(arg) === '[object Function]';
+    }
+
+    /**
+     * Dispose class
+     * @constructor
+     */
+    var Disposal = Class.extend({
+        disposeInternal: noop,
+        dispose: function (removeNode) {
+            var el = this.el;
+
+            if (removeNode && el) {
+                el.parentNode.removeChild(el);
+                this.el = null;
+            }
+
+            this.disposeInternal.apply(this, arguments);
+        }
+    });
+
+
+    /**
+     * PropertyValue class.
+     * This class give property values.
+     * @constructor
+     * @param {Array} types.
+     */
     function PropertyValue (types) {
         this._types = types;
         this._value = null;
         this._optimize();
     }
     PropertyValue.prototype = {
+        constructor: PropertyValue,
+
         toString: function () {
             return this.stringify();
         },
         stringify: function (val) {
-
             var types = this._types,
                 type  = null,
                 values = [],
                 cnt    = 0,
-                ret    = '';
+                ret    = '',
+                isFilter = false;
 
             for (var i = 0, l = types.length; i < l; ++i) {
                 type = types[i];
 
                 for (var prop in type) {
                     values = type[prop];
-                    ret += prop !== '-' ? prop + '(' : '';
+                    isFilter = (typeof values[0] === 'string');
 
-                    for (var j = 0, k = values.length; j < k; j += 3) {
+                    if (isFilter) {
+                        ret += prop + '(' + values[0] + '=';
+                    }
+                    else if (prop !== '-') {
+                        ret += prop + '(';
+                    }
+
+                    for (var j = isFilter ? 1 : 0, k = values.length; j < k; j += 3) {
                         ret += val ? val[cnt++] : values[j + 0]; //as number
                         ret += values[j + 1] || ''; // as unit
                         ret += values[j + 2] || ''; // as separator
@@ -132,10 +244,13 @@
                     ret += prop !== '-' ? ') ' : '';
                 }
             }
-            
 
             return ret;
         },
+
+        /**
+         * Optimize to list property value list.'
+         */
         _optimize: function () {
 
             var ret = [],
@@ -145,6 +260,7 @@
 
             for (var i = 0, l = types.length; i < l; ++i) {
                 type = types[i];
+
                 for (var prop in type) {
                     value = type[prop];
 
@@ -166,43 +282,78 @@
         },
         getTypes: function () {
             return this._types;
-        },
-        constructor: PropertyValue
+        }
     };
 
-    function ValueParser (prop, str) {
-        this._str = str;
-        this._cur = str;
-        this._prop = prop;
-        this._value = [];
-        this._type = '';
-        this._types = [];
-    }
+    /**
+     * Property value parser class.
+     * @constructor
+     * @param {string} prop A property name.
+     * @param {string} str A property value.
+     */
+    var ValueParser = Disposal.extend({
+        init: function (el, prop, str) {
+            this.el    = el;
+            this._cur  = str;
+            this._prop = prop;
+            this._value = [];
+            this._type  = '';
+            this._types = [];
+        },
+        /** @override */
+        disposeInternal: function () {
+            this.el     = null;
+            this._cur   = null;
+            this._prop  = null;
+            this._value = null;
+            this._type  = null;
+            this._types = null;
+        },
 
-    ValueParser.prototype = {
+        /**
+         * As interface.
+         */
         parse: function () {
 
             var type = {},
+                curval = null,
+                delta  = 0,
                 reg = null,
                 m   = null;
 
             //type of number
             if (typeof this._cur === 'number') {
-                type['-'] = [ this._cur, getUnitType(this._prop)];
+                type['-'] = [this._cur, getUnitType(this._prop)];
                 this._types.push(type);
             }
 
             //type of like number.
             else if (/^\d+$/.test(this._cur)) {
-                type['-'] = [ this._cur, getUnitType(this._prop)];
+                type['-'] = [this._cur, getUnitType(this._prop)];
                 this._types.push(type);
+            }
+
+            else if (/^\s*[-+]=(\d+)/.test(this._cur)) {
+                if (!this.el) {
+                    return null;
+                }
+
+                curval = win.getComputedStyle(this.el, '')[this._prop];
+
+                if (curval) {
+                    delta = +RegExp.$1;
+                    curval = parseInt(curval, 10);
+                    curval += (this._cur.indexOf('+=') > -1) ? delta : -delta;
+                    type['-'] = [curval, getUnitType(this._prop)];
+                    this._types.push(type);
+                }
             }
 
             /*!
              * type of number with unit.
-             * e.g. 5px | 5px 5px
+             * e.g. 5px | -5px | 5px 5px
              */
-            else if (/\d/.test(this._cur.charAt(0))) {
+            else if (/[-\d]/.test(this._cur.charAt(0))) {
                 type['-'] = this._parse();
                 this._types.push(type);
             }
@@ -218,6 +369,9 @@
             return new PropertyValue(this._types);
         },
 
+        /**
+         * Parse a value as words.
+         */
         _parseWord: function () {
 
             var type = {};
@@ -237,7 +391,13 @@
             }
 
             //parse for primitive.
-            type[m[1]] = this._parse();
+            if (!/[-\d]/.test(this._cur.charAt(0))) {
+                type[m[1]] = this._parseFilter();
+            }
+            else {
+                type[m[1]] = this._parse();
+            }
+
             this._types.push(type);
 
             reg = /\s*\)/i;
@@ -246,6 +406,26 @@
             if (this._cur) {
                 this._parseWord();
             }
+        },
+
+        /**
+         * Parse filer in ()
+         * Like this: translate(5px, 5px, 3px);
+         *
+         * @return {Array.<string>}
+         */
+        _parseFilter: function () {
+            var reg = /(\w+)=(\d+)(\w*)/i,
+                m = reg.exec(this._cur);
+
+            this._cur = this._cur.replace(reg, '');
+
+            if (!/^\s*\)\s*$/.test(this._cur)) {
+                throw new Error('Parse error as inner ().');
+            }
+
+            //filter name, filter number, filter unit
+            return [m[1], +m[2], m[3]];
         },
 
         /**
@@ -285,64 +465,6 @@
             }
 
             return ret;
-        },
-        constructor: ValueParser
-    };
-
-    var unitTypes = {};
-
-    function getUnitType (prop) {
-        if (unitTypes[prop] !== undefined) {
-            return unitTypes[prop];
-        }
-
-        var div = doc.createElement('div');
-
-        if (!prop in div.style) {
-            return null;
-        }
-
-        div.style[prop] = 0;
-
-        var unit = '' + div.style[prop];
-        unit = unit.slice(1);
-        unitTypes[prop] = unit;
-
-        div = null;
-
-        return unit;
-    }
-
-    function each (arr, func, context) {
-        if (Array.prototype.forEach) {
-            arr.forEach(func, context);
-        }
-        else {
-            for (var i = 0, l = arr.length; i < l; ++i) {
-                func.call(context || arr, arr[i]);
-            }
-        }
-    }
-
-    function isFunction (arg) {
-        return ({}).toString.call(arg) === '[object Function]';
-    }
-
-    /**
-     * Dispose class
-     * @constructor
-     */
-    var Disposal = Class.extend({
-        disposeInternal: noop,
-        dispose: function (removeNode) {
-            var el = this.el;
-
-            if (removeNode && el) {
-                el.parentNode.removeChild(el);
-                this.el = null;
-            }
-
-            this.disposeInternal.apply(this, arguments);
         }
     });
 
@@ -454,82 +576,19 @@
     //Shortcut.
     EvtEmit.fn = EvtEmit.prototype;
     EvtEmit.fn.fire = EvtEmit.fn.trigger;
-    EvtEmit.fn.on = EvtEmit.fn.bind;
-    EvtEmit.prototype.off = EvtEmit.fn.unbind;
-
-    /* ------------------------------------------------
-        Defined class method.
-    --------------------------------------------------- */
-    EvtEmit.attach = (function() {
-
-        var re = new RegExp('Object|Array|Date|Arguments', 'i');
-
-        /**
-         * util functions
-         */
-        function detectType(o) {
-            return Object.prototype.toString.call(o).replace(/^\[object (.+)\]$/, '$1');
-        }
-
-        function makeArray(args, sp) {
-            if (!sp) {
-                sp = 0;
-            }
-
-            return Array.prototype.slice.call(args, sp);
-        }
-
-        function _cloneObject(o, type) {
-
-            var newList = [],
-                i, e;
-
-            if(!type) {
-                type = detectType(o);
-            }
-            if (type == 'Array') {
-                for (i = 0; e = o[i];  i++) {
-                  newList.push(_cloneObject(e));
-                }
-
-                return newList;
-            }
-            else if (type == 'Object' || type == 'Arguments') {
-
-              return _extendObject({}, o, true);
-            }
-            else if (type == 'Date') {
-
-              return new Date(o.toString());
-            }
-            else {
-
-              return o;
-            }
-        }
-
-        function _extendObject(parent, obj, deepCopy) {
-
-            var val, type;
-
-            for (var key in obj) {
-                val = obj[key];
-                type = detectType(val);
-
-                parent[key] = (deepCopy && re.test(type)) ? _cloneObject(val, type) : val;
-            }
-
-            return parent;
-        }
-
-        return function(target) {
-            _extendObject(target, new EvtEmit, true);
-        };
-    })();
+    EvtEmit.fn.on   = EvtEmit.fn.bind;
+    EvtEmit.fn.off  = EvtEmit.fn.unbind;
 
     ////////////////////////////////////////////////////////
 
+
+    /**
+     * A main animation object in a Stage.
+     * @constructor
+     * Disposal <- EvtEmit
+     */
     var Crono = EvtEmit.extend({
+        name: 'Crono',
         init: function () {
             this._children  = [];
             this._frame     = 0;
@@ -548,7 +607,7 @@
         _getLastFrame: function () {
             var children = this._children,
                 len = children.length,
-                ret = 0,
+                ret = this.getLastFrame(),
                 max = Math.max;
 
             while (len--) {
@@ -640,10 +699,9 @@
             });
         },
 
-        /**
-         * noop
-         */
-        getLastFrame: noop,
+        getLastFrame: function () {
+            return this._lastFrame || 0;
+        },
 
         /**
          * Every frame it is invoked.
@@ -689,7 +747,13 @@
 
     /////////////////////////////////////////////////////////////////
 
+
+    /**
+     * A stage object. It can has children of Crono class.
+     * Disposal <- EvtEmit <- Crono
+     */
     var Stage = Crono.extend({
+        name: 'Stage',
         init: function () {
             this._super();
             this._stopped = true;
@@ -768,7 +832,16 @@
      * Disposal <- EvtEmit
      */
     var Keyframes = EvtEmit.extend({
-        init: function (frames, config) {
+        name: 'Keyframes',
+        isMSIEUnder8: (function () {
+            var isMsie  = navigator.userAgent.indexOf('MSIE') > -1,
+                version = /msie\s+([\.\d]+)/i.exec(navigator.userAgent);
+
+            version = version ? +version[1] : null;
+
+            return isMsie && (version <= 8);
+        }()),
+        init: function (el, frames, config) {
 
             config || (config = {});
             config.defaults || (config.defaults = {});
@@ -777,6 +850,7 @@
                 frames = [frames];
             }
 
+            this.el = el;
             this._frames = frames;
             this._config = config;
             this._optimize();
@@ -792,7 +866,7 @@
             PRIVATE METHODS.
         - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
         /**
-         * @param {number} pos
+         * @param {number} pos As frame position.
          */
         _getKeyframes: function (pos) {
 
@@ -818,6 +892,17 @@
                 to: to
             };
         },
+
+        _checkFilter: function (prop) {
+            var filterMap = {
+                opacity: {
+                    name: 'alpha',
+                    magni: 100
+                }
+            };
+
+            return filterMap[prop];
+        },
         
         /**
          * Optimize data.
@@ -831,35 +916,48 @@
 
             this.each(function (frame) {
 
+                if (!frame) {
+                    return
+                }
+
                 var properties,
                     prop_ = '',
                     tmp  = [],
+                    filterType = [],
                     ch   = '',
-                    type1, type2,
+                    type1, type2, propType,
                     unit = '',
                     div  = null,
                     vp   = null;
 
-                if (frame) {
-                    frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
+                frame.easing = easing[frame.timingFunction || config.defaults.timingFunction || ''];
 
-                    if (isFunction(frame.on)) {
-                        keyframeActions[frame.frame] = frame.on;
-                    }
+                if (isFunction(frame.on)) {
+                    keyframeActions[frame.frame] = frame.on;
+                }
 
-                    if (frame.properties) {
-                        frame.properties_ = {};
-                        properties = frame.properties;
+                if ((properties = frame.properties)) {
+                    frame.properties_ = {};
 
-                        for (var prop in properties) {
-                            prop_ = '';
-                            div  = doc.createElement('div');
-                            unit = '';
+                    for (var prop in properties) {
+                        prop_ = '';
+                        div  = doc.createElement('div');
+                        unit = '';
 
-                            if (!(prop in div.style)) {
-                                //check prefix
-                                if (prop.charAt(0) === '-') {
-                                    tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(prop);
+                        if (this.isMSIEUnder8 && (filterType = this._checkFilter(prop))) {
+                            prop_ = 'filter';
+                            if (filterType.magni) {
+                                properties[prop] *= filterType.magni;
+                            }
+                            properties[prop] = filterType.name + '(' + prop + '=' + properties[prop] + ')'
+                        }
+
+                        if (!(prop in div.style)) {
+                            //check prefix
+                            if (prop.charAt(0) === '@') {
+                                for (var i = 0, l = prefixList.length; i < l; ++i) {
+                                    propType = prefixList[i] + prop.slice(1);
+                                    tmp = /^(-)(\w+)-(\w)(\w+)$/.exec(propType);
 
                                     //e.g. webkitTransform
                                     type1 = tmp[2] + tmp[3].toUpperCase() + tmp[4];
@@ -871,37 +969,41 @@
 
                                     if (type1 in div.style) {
                                         prop_ = type1;
+                                        break;
                                     }
                                     else if (type2 in div.style) {
                                         prop_ = type2;
-                                    }
-                                    else {
-                                        delete properties[prop];
-                                        continue;
+                                        break;
                                     }
                                 }
-                                else {
+
+                                if (prop_ === '') {
                                     delete properties[prop];
                                     continue;
                                 }
                             }
-
-                            if (typeof properties[prop] === 'number') {
-                                unit = getUnitType(prop);
+                            else {
+                                //delete properties[prop];
+                                //continue;
                             }
-
-                            div.style[prop_ || prop] = properties[prop] + (unit || '');
-
-                            if (!div.style[prop_ || prop]) {
-                                delete properties[prop];
-                                continue;
-                            }
-
-                            vp = new ValueParser((prop_ || prop), properties[prop]);
-                            var tmp = vp.parse();
-
-                            frame.properties_[prop_ || prop] = tmp;
                         }
+
+                        if (typeof properties[prop] === 'number') {
+                            unit = getUnitType(prop);
+                        }
+
+                        div.style[prop_ || prop] = properties[prop] + (unit || '');
+
+                        if (!div.style[prop_ || prop]) {
+                            //delete properties[prop];
+                            //continue;
+                        }
+
+                        vp = new ValueParser(this.el, (prop_ || prop), properties[prop]);
+                        var tmp = vp.parse();
+                        vp.dispose();
+
+                        frame.properties_[prop_ || prop] = tmp;
                     }
                 }
             }, this);
@@ -1028,18 +1130,31 @@
 
     /////////////////////////////////////////////////////////////////
     
+    /**
+     * Movie class.
+     * @constructor
+     * Disposal <- EvtEmit <- Crono
+     */
     var Movie = Crono.extend({
+        name: 'Movie',
         init: function (el, keyframes, config) {
             this._super();
+
+            config || (config = {});
 
             this.el     = el;
             this._index = 0;
 
+            this._autoDestroy = config.autoDestroy;
+            this._autoDispose = config.autoDispose;
             this.setKeyframes(keyframes, config);
         },
 
         dispose: function (removeNode) {
             this._super(removeNode);
+            this.each(function (child) {
+                child.dispose();
+            });
             this._parent.remove(this);
             this._keyframes.dispose();
             this._keyframes = null;
@@ -1053,11 +1168,14 @@
         },
 
         /**
+        /**
          * @param {boolean} reverse
          */
         enterFrame: function (isTerminal) {
 
             this._super(isTerminal);
+
+            var lastFrame = this._lastFrame;
 
             if (this._stopped) {
                 return;
@@ -1071,7 +1189,7 @@
             if (this._reversing) {
                 --t;
             }
-            else if (!isTerminal || this._lastFrame > t) {
+            else if (!isTerminal || lastFrame > t) {
                 ++t;
             }
 
@@ -1081,14 +1199,36 @@
 
             this._frame = t;
 
-            if (!el) {
+            if (this._prevT === t) {
                 return;
+            }
+
+            this._prevT = t;
+
+            // Fire event as animation end if frame is last frame.
+            if (t === lastFrame) {
+                this.fire('animationend', {
+                    frame: t,
+                    flow: this._reversing ? 'backward' : 'forward'
+                });
             }
 
             props = keyframes.getFrameAt(t);
 
-            for (var prop in props) {
-                el.style[prop] = props[prop];
+            if (el) {
+                for (var prop in props) {
+                    el.style[prop] = props[prop];
+                }
+            }
+
+            if (this._autoDestroy === true && t === lastFrame) {
+                this.dispose(true);
+                return;
+            }
+
+            if (this._autoDispose === true && t === lastFrame) {
+                this.dispose();
+                return;
             }
         },
 
@@ -1115,7 +1255,7 @@
          * @param {number} pos
          */
         go: function (pos) {
-            this._frame = +pos;
+            this._frame = +pos - 1;
         },
 
         /**
@@ -1125,20 +1265,11 @@
         setKeyframes: function (keyframes, config) {
             var _keyframes = null;
 
-            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(keyframes, config);
+            _keyframes = keyframes instanceof Keyframes ? keyframes : new Keyframes(this.el, keyframes, config);
             _keyframes.setParent(this);
 
             this._keyframes = _keyframes;
             this._lastFrame = this.getLastFrame();
-        },
-        
-
-        /*! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-            PRIVATE METHODS.
-        - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - */
-        _onUpdate: function (data) {
-            //this.stop();
-            //this._frame = data.lastFrame;
         }
     });
 
@@ -1146,6 +1277,5 @@
     exports.Crono = Crono;
     exports.Stage = Stage;
     exports.Movie = Movie;
-    exports.ValueParser = ValueParser;
 
 }(window, window.document, window.Class, window));
