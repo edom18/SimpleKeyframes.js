@@ -7,7 +7,8 @@
     var stage = new Stage();
     var elms = [].slice.call(doc.querySelectorAll('.movie'));
 
-    var movie1 = new Movie(elms[0], [
+    //var movie1 = new Movie(elms[0], [
+    var movie1 = new Movie('.movie', [
         { frame: 10, properties: { '@transform': 'rotate(0deg)' }, on: function () { this.playFor(); } },
         { frame: 40, properties: { '@transform': 'rotate(90deg) scale(1)' } },
         { frame: 70, properties: { '@transform': 'rotate(90deg) scale(0.5)' } },

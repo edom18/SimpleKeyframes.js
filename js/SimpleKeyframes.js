@@ -1142,7 +1142,13 @@
 
             config || (config = {});
 
-            this.el     = el;
+            if (typeof el === 'string') {
+                this.el = doc.querySelector(el);
+            }
+            else {
+                this.el = el;
+            }
+
             this._index = 0;
 
             this._autoDestroy = config.autoDestroy;
